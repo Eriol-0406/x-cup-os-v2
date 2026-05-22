@@ -1,0 +1,8 @@
+{
+  "name": "@x-cup/abi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.js",
+  "description": "Auto-exported XCupMarket ABI from forge build. Populated by contracts/script/export-abi.sh."
+}
