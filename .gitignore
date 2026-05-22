@@ -3,11 +3,26 @@ node_modules/
 .pnp.*
 .yarn/*
 
-# env
+# env / secrets — never commit these
 .env
-.env.local
-.env.*.local
+.env.*
 !.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+credentials.json
+*.secret
+*secret*
+*private-key*
+*privatekey*
+
+# wallet artifacts
+keystore/
+*.keystore
+mnemonic.txt
+seed.txt
 
 # build outputs
 dist/
