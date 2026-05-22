@@ -1,0 +1,41 @@
+// X-Cup OS API database — SQLite for Day 1 dev, swap to Postgres later by
+// changing `provider` to "postgresql" and the DATABASE_URL in .env.
+//
+// Schema kept minimal — we add tables as features land. Day 2 only needs
+// User + Strategy. StrategyFire + MatchCache get added when the watch loop
+// is wired up.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                       String     @id @default(cuid())
+  mainWallet               String     @unique // EVM checksum address
+  agentWallet              String?    @unique // generated burner address
+  agentWalletEncryptedKey  String?    // AES-256-GCM ciphertext (base64); null until generated
+  createdAt                DateTime   @default(now())
+  strategies               Strategy[]
+}
+
+model Strategy {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  englishText   String    // original user input
+  parsedJson    String    // serialized ParsedStrategy from packages/types
+  status        String    @default("draft") // draft | active | paused | expired | exhausted
+  maxLossUsdc   Float?    // copied out of parsedJson.riskLimits for fast queries
+  currentPnlUsdc Float    @default(0)
+  fireCount     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
