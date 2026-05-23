@@ -1,0 +1,23 @@
+{
+  "1952": {
+    "name": "X Layer Testnet",
+    "rpc": "https://testrpc.xlayer.tech",
+    "explorer": "https://www.oklink.com/x-layer-testnet",
+    "deployer": "0xFaC819e2465C24529ad3684D61BFb442cC239d8E",
+    "contracts": {
+      "MockUSDC": {
+        "address": "0xf6E9C3e5f90d3256F25936312C0846f3e05F4122",
+        "deployTx": "0x36181e6596afea38561e50de8da4025e8872606fa94355a775d3865b47d93053"
+      },
+      "XCupMarket": {
+        "address": "0x74A01452c7980C2bf03d4737C8716C78AF5Fc4E3",
+        "deployTx": "0xcad828f38c95613829f6359f1267c960ea64d921b27c87512ccea919cae54ff6"
+      }
+    },
+    "seedMarkets": [
+      { "id": 1, "matchId": "FIFA-ARG-FRA-2026", "outcomes": 2, "tx": "0x36fd5117a27c90db9192e45106df3b429a5da38725b6900813a30afd1ace5afc" },
+      { "id": 2, "matchId": "FIFA-ENG-BRA-2026", "outcomes": 3, "tx": "0x83580f6624700dbecbec4f0d13be6c621dd135d9d9fc16de4d157615deec64c4" }
+    ],
+    "deployedAt": "2026-05-22T18:46:31.895Z"
+  }
+}

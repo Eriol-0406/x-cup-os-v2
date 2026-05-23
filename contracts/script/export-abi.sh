@@ -14,15 +14,8 @@ for contract in XCupMarket MockUSDC; do
 done
 
 # Generate an index.js so consumers can `import { XCupMarketAbi } from '@x-cup/abi'`
-cat > "${OUT_DIR}/index.js" <<'EOF'
-import XCupMarketAbi from "./XCupMarket.abi.json" with { type: "json" };
-import MockUSDCAbi from "./MockUSDC.abi.json" with { type: "json" };
-export { XCupMarketAbi, MockUSDCAbi };
-EOF
-
-cat > "${OUT_DIR}/index.d.ts" <<'EOF'
-export declare const XCupMarketAbi: readonly unknown[];
-export declare const MockUSDCAbi: readonly unknown[];
-EOF
+# NOTE: index.js and index.d.ts are hand-maintained (they also export
+# addresses.json which is populated by the deploy script, not by forge build).
+# We do NOT regenerate them here — that would clobber the addresses export.
 
 echo "ABI export complete."

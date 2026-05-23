@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.18.0",
+    "@x-cup/abi": "*",
     "@x-cup/types": "*",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
