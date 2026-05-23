@@ -353,6 +353,67 @@ textarea.strategy-input::placeholder { color: var(--text-3); }
   border-top: 1px solid var(--border);
 }
 
+/* ---- Agent panel ---- */
+.agent-panel {
+  background: linear-gradient(135deg, var(--bg-1), var(--bg-2));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.agent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.agent-address {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  color: var(--text-1);
+  font-weight: 500;
+}
+.agent-balances {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.agent-bal {
+  text-align: right;
+}
+.agent-bal-num {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.agent-bal-label {
+  font-size: 10px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+.agent-bal-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--border);
+}
+.agent-fund-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.agent-fund-info {
+  flex: 1;
+  min-width: 200px;
+}
+
 /* ---- Match cards ---- */
 .match-grid {
   display: grid;

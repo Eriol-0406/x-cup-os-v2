@@ -47,6 +47,19 @@ export type ParseFailure = {
   latencyMs?: number;
 };
 
+export interface AgentInfo {
+  mainWallet: string;
+  agentAddress: string;
+  freshlyCreated: boolean;
+}
+
+export async function getOrCreateAgent(walletAddress: string): Promise<AgentInfo> {
+  const res = await fetch(`${API_URL}/users/by-address/${walletAddress}`);
+  const json = (await res.json()) as { ok: boolean } & AgentInfo & { error?: string };
+  if (!json.ok) throw new Error(json.error ?? "Failed to provision agent");
+  return { mainWallet: json.mainWallet, agentAddress: json.agentAddress, freshlyCreated: json.freshlyCreated };
+}
+
 export async function parseStrategy(text: string, signal?: AbortSignal): Promise<ParseSuccess | ParseFailure> {
   const res = await fetch(`${API_URL}/strategies/parse`, {
     method: "POST",

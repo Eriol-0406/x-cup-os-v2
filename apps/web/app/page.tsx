@@ -2,6 +2,7 @@ import { Header } from "@/components/Header";
 import { StrategyEditor } from "@/components/StrategyEditor";
 import { MatchList } from "@/components/MatchList";
 import { ActivityDashboard } from "@/components/ActivityDashboard";
+import { AgentPanel } from "@/components/AgentPanel";
 
 export default function HomePage() {
   return (
@@ -21,6 +22,7 @@ export default function HomePage() {
           </p>
         </section>
 
+        <AgentPanel />
         <StrategyEditor />
         <MatchList />
         <ActivityDashboard />
