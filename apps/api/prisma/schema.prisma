@@ -36,6 +36,7 @@ model Strategy {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   fires         StrategyFire[]
+  claims        Claim[]
 
   @@index([userId])
   @@index([status])
@@ -58,5 +59,22 @@ model StrategyFire {
   createdAt       DateTime  @default(now())
 
   @@index([strategyId])
+  @@index([status])
+}
+
+/// One row per claim event (after market settlement). Auto-created by the
+/// oracle settle flow when a strategy has winning stakes on a market.
+model Claim {
+  id              String    @id @default(cuid())
+  strategyId      String
+  strategy        Strategy  @relation(fields: [strategyId], references: [id])
+  marketId        Int
+  payoutUsdc      Float     // gross payout (incl. original stake)
+  txHash          String?
+  status          String    // pending | confirmed | failed
+  failureReason   String?
+  createdAt       DateTime  @default(now())
+
+  @@unique([strategyId, marketId]) // one claim per strategy per market
   @@index([status])
 }
