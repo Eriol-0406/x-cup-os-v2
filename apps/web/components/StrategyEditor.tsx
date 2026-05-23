@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { parseStrategy, type ParseSuccess, type ParseFailure } from "@/lib/api";
+import { parseStrategy, deployStrategy, type ParseSuccess, type ParseFailure } from "@/lib/api";
+import { useWallet } from "./WalletProvider";
 import { ParsePreview } from "./ParsePreview";
 
 type ParseState =
@@ -9,6 +10,12 @@ type ParseState =
   | { kind: "loading" }
   | { kind: "success"; data: ParseSuccess }
   | { kind: "error"; error: ParseFailure | { error: string } };
+
+type DeployState =
+  | { kind: "idle" }
+  | { kind: "deploying" }
+  | { kind: "done"; strategyId: string }
+  | { kind: "error"; message: string };
 
 const EXAMPLES = [
   "If France wins their next match and Mbappe scores, stake 50 USDC on YES for France reaches the final. Stop if I lose more than 200 USDC.",
@@ -18,13 +25,14 @@ const EXAMPLES = [
 ];
 
 export function StrategyEditor() {
+  const { state: walletState } = useWallet();
   const [text, setText] = useState("");
   const [state, setState] = useState<ParseState>({ kind: "idle" });
+  const [deploy, setDeploy] = useState<DeployState>({ kind: "idle" });
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Debounced parse — fires 600ms after the user stops typing. The /strategies/parse
-  // endpoint is stateless, so we can throw old in-flight requests away freely.
+  // Debounced parse — 600ms after the user stops typing.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (abortRef.current) abortRef.current.abort();
@@ -34,7 +42,6 @@ export function StrategyEditor() {
       setState({ kind: "idle" });
       return;
     }
-
     setState({ kind: "loading" });
 
     debounceRef.current = setTimeout(async () => {
@@ -62,7 +69,38 @@ export function StrategyEditor() {
     };
   }, [text]);
 
-  const canDeploy = state.kind === "success";
+  // Reset deploy state when user starts editing again.
+  useEffect(() => {
+    if (deploy.kind !== "idle") setDeploy({ kind: "idle" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
+
+  const onDeploy = async () => {
+    if (state.kind !== "success") return;
+    if (walletState.kind !== "connected") {
+      setDeploy({ kind: "error", message: "Connect your wallet first" });
+      return;
+    }
+    setDeploy({ kind: "deploying" });
+    try {
+      const record = await deployStrategy(walletState.address, text.trim(), state.data.parsed);
+      setDeploy({ kind: "done", strategyId: record.id });
+      window.dispatchEvent(new CustomEvent("xcup:strategy-deployed", { detail: { id: record.id } }));
+    } catch (err: any) {
+      setDeploy({ kind: "error", message: err?.message ?? "Deploy failed" });
+    }
+  };
+
+  const canDeploy = state.kind === "success" && walletState.kind === "connected" && deploy.kind !== "deploying";
+
+  const deployMeta = (() => {
+    if (deploy.kind === "deploying") return "Activating on backend…";
+    if (deploy.kind === "done") return "✓ Agent live — waiting for trigger conditions";
+    if (deploy.kind === "error") return `✗ ${deploy.message}`;
+    if (state.kind !== "success") return "Strategy will be parsed before deploy";
+    if (walletState.kind !== "connected") return "Connect your wallet to deploy";
+    return "Ready to deploy on X Layer testnet";
+  })();
 
   return (
     <div className="editor-grid" id="editor">
@@ -86,11 +124,21 @@ export function StrategyEditor() {
           ))}
         </div>
         <div className="deploy-row">
-          <span className="deploy-meta">
-            {canDeploy ? "Ready to deploy on X Layer testnet" : "Strategy will be parsed before deploy"}
+          <span
+            className="deploy-meta"
+            style={{
+              color:
+                deploy.kind === "done"
+                  ? "var(--success)"
+                  : deploy.kind === "error"
+                    ? "var(--error)"
+                    : undefined,
+            }}
+          >
+            {deployMeta}
           </span>
-          <button className="btn btn-primary" disabled={!canDeploy}>
-            Deploy Agent →
+          <button className="btn btn-primary" disabled={!canDeploy} onClick={onDeploy}>
+            {deploy.kind === "deploying" ? "Deploying…" : deploy.kind === "done" ? "Deployed ✓" : "Deploy Agent →"}
           </button>
         </div>
       </div>

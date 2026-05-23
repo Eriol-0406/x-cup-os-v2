@@ -35,7 +35,28 @@ model Strategy {
   fireCount     Int       @default(0)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  fires         StrategyFire[]
 
   @@index([userId])
+  @@index([status])
+}
+
+/// One row per agent fire. Recorded whether the on-chain tx succeeds or
+/// fails so the activity dashboard can show users 'agent tried to stake X
+/// but the market closed' alongside successful stakes.
+model StrategyFire {
+  id              String    @id @default(cuid())
+  strategyId      String
+  strategy        Strategy  @relation(fields: [strategyId], references: [id])
+  marketId        Int       // on-chain XCupMarket id
+  outcomeIdx      Int       // 0 = YES, 1 = NO (binary); 0/1/2 for ternary
+  stakeUsdc       Float
+  txHash          String?   // null while pending submission
+  status          String    // pending | confirmed | failed
+  failureReason   String?   // populated on status == failed
+  matchEventJson  String    // the event payload that triggered this fire
+  createdAt       DateTime  @default(now())
+
+  @@index([strategyId])
   @@index([status])
 }

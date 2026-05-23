@@ -353,6 +353,39 @@ textarea.strategy-input::placeholder { color: var(--text-3); }
   border-top: 1px solid var(--border);
 }
 
+/* ---- Activity table ---- */
+.fires-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.fires-table th {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.fires-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.fires-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.fires-table tbody tr:hover td {
+  background: var(--bg-2);
+}
+.td-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
 /* ---- Agent panel ---- */
 .agent-panel {
   background: linear-gradient(135deg, var(--bg-1), var(--bg-2));

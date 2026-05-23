@@ -3,6 +3,7 @@ import cors from "cors";
 import { env } from "./env.js";
 import { strategiesRouter } from "./routes/strategies.js";
 import { usersRouter } from "./routes/users.js";
+import { adminRouter } from "./routes/admin.js";
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/strategies", strategiesRouter);
 app.use("/users", usersRouter);
+app.use("/admin", adminRouter);
 
 app.listen(env.PORT, () => {
   console.log(`✅ x-cup-os api listening on http://localhost:${env.PORT}`);
