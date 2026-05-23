@@ -353,6 +353,126 @@ textarea.strategy-input::placeholder { color: var(--text-3); }
   border-top: 1px solid var(--border);
 }
 
+/* ---- Match cards ---- */
+.match-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.match-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: border-color 0.15s;
+}
+.match-card:hover { border-color: var(--border-hover); }
+
+.match-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.match-id-label {
+  font-size: 11px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+.status-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.status-open { background: rgba(74, 222, 128, 0.12); color: var(--success); }
+.status-settled { background: var(--accent-dim); color: #b4c9ff; }
+.status-cancelled { background: rgba(248, 113, 113, 0.12); color: var(--error); }
+.status-none { background: var(--bg-2); color: var(--text-3); }
+
+.match-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 6px 0;
+}
+.team-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.team-flag { font-size: 36px; line-height: 1; }
+.team-code {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: 0.04em;
+}
+.vs {
+  font-size: 11px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.match-pots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pot-row {
+  display: grid;
+  grid-template-columns: 50px 1fr 60px;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+}
+.pot-label {
+  color: var(--text-2);
+  font-weight: 500;
+}
+.pot-bar-wrap {
+  background: var(--bg-0);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+.pot-bar {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  transition: width 0.3s ease-out;
+  min-width: 0;
+}
+.pot-amount {
+  text-align: right;
+  color: var(--text-1);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.pot-row-winner .pot-bar { background: var(--success); }
+.pot-row-winner .pot-label { color: var(--success); font-weight: 700; }
+
+.match-footer {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.match-meta {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.match-meta strong { color: var(--text-1); font-weight: 600; }
+
 /* ---- Footer ---- */
 .footer {
   border-top: 1px solid var(--border);
