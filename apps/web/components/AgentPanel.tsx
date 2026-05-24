@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ethers } from "ethers";
 import { useWallet } from "./WalletProvider";
 import { shortAddress } from "@/lib/wallet";
 import { getOrCreateAgent } from "@/lib/api";
 import { mockUsdc, readProvider, signerProvider } from "@/lib/contract";
+
+const WALLET_TIMEOUT_MS = 90_000;
 
 type AgentState =
   | { kind: "noWallet" }
@@ -29,6 +31,30 @@ export function AgentPanel() {
   const [fund, setFund] = useState<FundState>({ kind: "idle" });
 
   const userAddress = walletState.kind === "connected" ? walletState.address : null;
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearTimer = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+  useEffect(() => () => clearTimer(), []);
+
+  const cancelFund = () => {
+    clearTimer();
+    setFund({ kind: "idle" });
+  };
+
+  const armWalletTimeout = () => {
+    clearTimer();
+    timeoutRef.current = setTimeout(() => {
+      setFund({
+        kind: "error",
+        message: "Timed out — wallet popup closed or no response. Try again.",
+      });
+    }, WALLET_TIMEOUT_MS);
+  };
 
   // Load (or create) the agent + balances once the user is connected.
   const refresh = useCallback(async () => {
@@ -64,6 +90,7 @@ export function AgentPanel() {
       return;
     }
     setFund({ kind: "approving" });
+    armWalletTimeout();
     try {
       const signer = await signerProvider();
       const usdc = mockUsdc(signer);
@@ -72,11 +99,13 @@ export function AgentPanel() {
       const tx = await usdc.transfer(agent.address, amountUnits);
       setFund({ kind: "sending", txHash: tx.hash });
       await tx.wait();
+      clearTimer();
       setFund({ kind: "done", txHash: tx.hash });
       await refresh();
     } catch (err: any) {
+      clearTimer();
       const code = err?.code;
-      const userRejected = code === 4001 || /rejected|denied/i.test(err?.message ?? "");
+      const userRejected = code === 4001 || /rejected|denied|user closed|user cancel/i.test(err?.message ?? "");
       setFund({
         kind: "error",
         message: userRejected ? "Transaction rejected" : err?.message ?? "Fund failed",
@@ -87,6 +116,7 @@ export function AgentPanel() {
   const onMint = async () => {
     if (!userAddress) return;
     setFund({ kind: "approving" });
+    armWalletTimeout();
     try {
       const signer = await signerProvider();
       const usdc = mockUsdc(signer);
@@ -95,10 +125,17 @@ export function AgentPanel() {
       const tx = await usdc.mint(userAddress, amount);
       setFund({ kind: "sending", txHash: tx.hash });
       await tx.wait();
+      clearTimer();
       setFund({ kind: "done", txHash: tx.hash });
       await refresh();
     } catch (err: any) {
-      setFund({ kind: "error", message: err?.message ?? "Mint failed" });
+      clearTimer();
+      const code = err?.code;
+      const userRejected = code === 4001 || /rejected|denied|user closed|user cancel/i.test(err?.message ?? "");
+      setFund({
+        kind: "error",
+        message: userRejected ? "Transaction rejected" : err?.message ?? "Mint failed",
+      });
     }
   };
 
@@ -184,6 +221,15 @@ export function AgentPanel() {
           </div>
         )}
 
+        {(fund.kind === "approving" || fund.kind === "sending") && (
+          <div style={{ marginTop: 10, fontSize: 12, color: "var(--text-3)", display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="spinner" />
+            {fund.kind === "approving" ? "Waiting for wallet confirmation…" : "Confirming on-chain…"}
+            <button className="tourney-cancel" onClick={cancelFund} title="Reset if your wallet popup closed">
+              cancel
+            </button>
+          </div>
+        )}
         {fund.kind === "done" && (
           <div style={{ marginTop: 10, fontSize: 12, color: "var(--success)" }}>
             ✓ Transfer confirmed —{" "}
@@ -193,7 +239,10 @@ export function AgentPanel() {
           </div>
         )}
         {fund.kind === "error" && (
-          <div style={{ marginTop: 10, fontSize: 12, color: "var(--error)" }}>✗ {fund.message}</div>
+          <div style={{ marginTop: 10, fontSize: 12, color: "var(--error)", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ flex: 1 }}>✗ {fund.message}</span>
+            <button className="tourney-cancel" onClick={cancelFund}>dismiss</button>
+          </div>
         )}
       </div>
     </section>

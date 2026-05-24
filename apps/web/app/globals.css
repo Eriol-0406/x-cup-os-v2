@@ -813,6 +813,17 @@ textarea.strategy-input::placeholder { color: var(--text-3); }
   gap: 6px;
 }
 .tourney-status .spinner { width: 10px; height: 10px; }
+.tourney-cancel {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  margin-left: auto;
+}
+.tourney-cancel:hover { color: var(--text-1); border-color: var(--border-hover); }
 
 /* ---- Footer ---- */
 .footer {

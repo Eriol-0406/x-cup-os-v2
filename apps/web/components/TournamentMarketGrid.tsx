@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ethers } from "ethers";
 import { listTournamentMarkets, type TournamentMarketRecord } from "@/lib/api";
 import { mockUsdc, signerProvider, xcupMarket } from "@/lib/contract";
@@ -9,6 +9,7 @@ import { useWallet } from "./WalletProvider";
 
 const EXPLORER = "https://www.oklink.com/x-layer-testnet";
 const DEFAULT_STAKE = "10";
+const WALLET_TIMEOUT_MS = 90_000; // auto-fail if no wallet response in 90s
 
 type Sort = "alpha" | "pot" | "yesProb";
 
@@ -116,10 +117,26 @@ function TeamCard({ m, onAfterStake }: { m: TournamentMarketRecord; onAfterStake
   const { state: walletState, connect } = useWallet();
   const [amount, setAmount] = useState(DEFAULT_STAKE);
   const [stake, setStake] = useState<StakeState>({ kind: "idle" });
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const probPercent = (m.impliedYesProb * 100).toFixed(0);
   const isWinner = m.settled && m.winningOutcome === 0;
   const isLoser = m.settled && m.winningOutcome === 1;
+
+  const clearTimer = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => () => clearTimer(), []);
+
+  const cancelPending = () => {
+    clearTimer();
+    setStake({ kind: "idle" });
+  };
 
   const onStake = async (outcomeIdx: 0 | 1) => {
     if (walletState.kind !== "connected") {
@@ -132,6 +149,16 @@ function TeamCard({ m, onAfterStake }: { m: TournamentMarketRecord; onAfterStake
       return;
     }
     setStake({ kind: "approving" });
+    // Safety net — if the wallet popup hangs (user closed it without rejecting,
+    // some wallets just never resolve the promise) we auto-fail after 90s so
+    // the UI doesn't sit forever on "Approving USDC…".
+    clearTimer();
+    timeoutRef.current = setTimeout(() => {
+      setStake({
+        kind: "error",
+        message: "Timed out — wallet popup closed or no response. Click YES/NO again to retry.",
+      });
+    }, WALLET_TIMEOUT_MS);
     try {
       const signer = await signerProvider();
       const usdc = mockUsdc(signer) as any;
@@ -149,12 +176,14 @@ function TeamCard({ m, onAfterStake }: { m: TournamentMarketRecord; onAfterStake
       const tx = await xcup.stake(m.marketId, outcomeIdx, stakeAmount);
       setStake({ kind: "sending", txHash: tx.hash });
       await tx.wait();
+      clearTimer();
       setStake({ kind: "done", txHash: tx.hash });
       window.dispatchEvent(new CustomEvent("xcup:tournament-stake", { detail: { marketId: m.marketId } }));
       onAfterStake();
     } catch (err: any) {
+      clearTimer();
       const code = err?.code;
-      const userRejected = code === 4001 || /rejected|denied/i.test(err?.message ?? "");
+      const userRejected = code === 4001 || /rejected|denied|user closed|user cancel/i.test(err?.message ?? "");
       setStake({
         kind: "error",
         message: userRejected ? "Transaction rejected" : err?.shortMessage ?? err?.message ?? "Stake failed",
@@ -221,14 +250,35 @@ function TeamCard({ m, onAfterStake }: { m: TournamentMarketRecord; onAfterStake
 
       {stake.kind !== "idle" && (
         <div className="tourney-status">
-          {stake.kind === "approving" && <><span className="spinner" /> Approving USDC…</>}
-          {stake.kind === "sending" && <><span className="spinner" /> Confirming stake…</>}
+          {stake.kind === "approving" && (
+            <>
+              <span className="spinner" /> Approving USDC…
+              <button className="tourney-cancel" onClick={cancelPending} title="Reset if your wallet popup closed without confirming">
+                cancel
+              </button>
+            </>
+          )}
+          {stake.kind === "sending" && (
+            <>
+              <span className="spinner" /> Confirming stake…
+              <button className="tourney-cancel" onClick={cancelPending} title="Reset — tx may still go through if already broadcast">
+                cancel
+              </button>
+            </>
+          )}
           {stake.kind === "done" && (
             <span style={{ color: "var(--success)" }}>
               ✓ Staked · <a href={`${EXPLORER}/tx/${stake.txHash}`} target="_blank" rel="noreferrer">tx</a>
             </span>
           )}
-          {stake.kind === "error" && <span style={{ color: "var(--error)" }}>✗ {stake.message}</span>}
+          {stake.kind === "error" && (
+            <>
+              <span style={{ color: "var(--error)", flex: 1 }}>✗ {stake.message}</span>
+              <button className="tourney-cancel" onClick={cancelPending}>
+                dismiss
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
