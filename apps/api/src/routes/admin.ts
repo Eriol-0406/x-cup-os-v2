@@ -2,8 +2,59 @@ import { Router } from "express";
 import { z } from "zod";
 import { processMatchEvent } from "../lib/firing.js";
 import { settleAndClaim } from "../lib/oracle.js";
+import { syncFixtures, createMissingMarkets } from "../lib/fixtureSync.js";
+import { fetchAccountStatus } from "../lib/apiFootball.js";
 
 export const adminRouter = Router();
+
+/**
+ * GET /admin/api-status — API-Football account/quota debug info.
+ * Useful for the dashboard or pre-flight checks.
+ */
+adminRouter.get("/api-status", async (_req, res) => {
+  try {
+    const status = await fetchAccountStatus();
+    return res.json({ ok: true, ...status });
+  } catch (err: any) {
+    return res.status(502).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+/**
+ * POST /admin/sync-fixtures — pull every fixture for the configured WC season
+ * from API-Football and upsert into the local Fixture table. Idempotent.
+ */
+adminRouter.post("/sync-fixtures", async (_req, res) => {
+  try {
+    const result = await syncFixtures();
+    return res.json({ ok: true, ...result });
+  } catch (err: any) {
+    console.error("[POST /admin/sync-fixtures]", err);
+    return res.status(502).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+const CreateMarketsSchema = z.object({
+  max: z.number().int().positive().max(200).optional(),
+});
+
+/**
+ * POST /admin/create-markets — for each Fixture without a FixtureMarket and
+ * with future kickoff, call XCupMarket.createMarket. Returns the mapping.
+ * Body: { max?: 20 } to throttle (default = all unmapped).
+ */
+adminRouter.post("/create-markets", async (req, res) => {
+  const body = CreateMarketsSchema.safeParse(req.body ?? {});
+  if (!body.success) return res.status(400).json({ ok: false, error: "invalid request", issues: body.error.flatten() });
+
+  try {
+    const created = await createMissingMarkets(body.data.max);
+    return res.json({ ok: true, created: created.length, markets: created });
+  } catch (err: any) {
+    console.error("[POST /admin/create-markets]", err);
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
 
 const MatchEventSchema = z.object({
   marketId: z.number().int().positive(),

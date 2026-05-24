@@ -14,8 +14,9 @@ import {MockUSDC} from "../src/MockUSDC.sol";
  *     --broadcast \
  *     --private-key $DEPLOYER_PRIVATE_KEY
  *
- * The script deploys MockUSDC + XCupMarket, mints some USDC to the deployer,
- * and creates two seed markets (Argentina-vs-France, England-vs-Brazil).
+ * Deploys MockUSDC + XCupMarket, mints 10k USDC to the deployer.
+ * Markets are created off-chain by the API's /admin/create-markets endpoint
+ * which mirrors API-Football fixtures into on-chain markets one per fixture.
  */
 contract Deploy is Script {
     function run() external {
@@ -30,12 +31,6 @@ contract Deploy is Script {
 
         XCupMarket xcup = new XCupMarket(IERC20(address(usdc)), deployer);
         console2.log("XCupMarket:", address(xcup));
-
-        uint256 closeTime = block.timestamp + 7 days;
-        uint256 m1 = xcup.createMarket("FIFA-ARG-FRA-2026", 2, closeTime);
-        uint256 m2 = xcup.createMarket("FIFA-ENG-BRA-2026", 3, closeTime);
-        console2.log("Seed market 1:", m1);
-        console2.log("Seed market 2:", m2);
 
         vm.stopBroadcast();
     }

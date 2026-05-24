@@ -1,83 +1,118 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
 import {
-  fetchAllMarkets,
-  parseMatchId,
-  flagFor,
-  formatUsdcPot,
-  formatCloseIn,
-  type MarketView,
-} from "@/lib/contract";
+  listFixtures,
+  isLiveStatus,
+  isFinishedStatus,
+  statusLabel,
+  type FixtureRecord,
+  type FixtureStatusFilter,
+} from "@/lib/api";
+import { MarketFilter } from "./MarketFilter";
 
 type State =
   | { kind: "loading" }
-  | { kind: "ready"; markets: MarketView[]; refreshedAt: number }
+  | { kind: "ready"; fixtures: FixtureRecord[]; refreshedAt: number }
   | { kind: "error"; message: string };
-
-const OUTCOME_LABELS_2: [string, string] = ["YES", "NO"];
-const OUTCOME_LABELS_3: [string, string, string] = ["Home", "Draw", "Away"];
 
 export function MatchList() {
   const [state, setState] = useState<State>({ kind: "loading" });
+  const [filter, setFilter] = useState<FixtureStatusFilter>("all");
 
   useEffect(() => {
     let alive = true;
     const load = async () => {
       try {
-        const markets = await fetchAllMarkets();
+        const fixtures = await listFixtures("all"); // fetch all once, filter client-side
         if (!alive) return;
-        setState({ kind: "ready", markets, refreshedAt: Date.now() });
+        setState({ kind: "ready", fixtures, refreshedAt: Date.now() });
       } catch (err: any) {
         if (!alive) return;
-        setState({ kind: "error", message: err?.message ?? "Failed to load markets" });
+        setState({ kind: "error", message: err?.message ?? "Failed to load fixtures" });
       }
     };
     load();
-    const t = setInterval(load, 15_000); // refresh every 15s
+    const t = setInterval(load, 30_000); // refresh every 30s
     return () => {
       alive = false;
       clearInterval(t);
     };
   }, []);
 
+  // Counts for filter pills
+  const counts = useMemo<Record<FixtureStatusFilter, number>>(() => {
+    if (state.kind !== "ready") return { all: 0, live: 0, upcoming: 0, finished: 0 };
+    const all = state.fixtures.length;
+    let live = 0,
+      upcoming = 0,
+      finished = 0;
+    for (const f of state.fixtures) {
+      if (isLiveStatus(f.status)) live++;
+      else if (isFinishedStatus(f.status)) finished++;
+      else upcoming++;
+    }
+    return { all, live, upcoming, finished };
+  }, [state]);
+
+  const filtered = useMemo(() => {
+    if (state.kind !== "ready") return [];
+    switch (filter) {
+      case "live":
+        return state.fixtures.filter((f) => isLiveStatus(f.status));
+      case "upcoming":
+        return state.fixtures.filter((f) => !isLiveStatus(f.status) && !isFinishedStatus(f.status));
+      case "finished":
+        return state.fixtures.filter((f) => isFinishedStatus(f.status));
+      default:
+        return state.fixtures;
+    }
+  }, [state, filter]);
+
   return (
     <section id="matches" style={{ marginBottom: 48 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>Live Markets</h2>
           <div style={{ color: "var(--text-3)", fontSize: 13, marginTop: 4 }}>
-            Read directly from <code style={{ fontSize: 12 }}>XCupMarket</code> on X Layer testnet · refreshes every 15s
+            Fixtures synced from API-Football. On-chain markets created lazily per fixture.
           </div>
         </div>
         {state.kind === "ready" && (
           <span className="panel-status">
-            <span style={{ color: "var(--success)" }}>●</span> {state.markets.length} market
-            {state.markets.length === 1 ? "" : "s"} on-chain
+            <span style={{ color: "var(--success)" }}>●</span> {filtered.length} of {state.fixtures.length} fixtures
           </span>
         )}
       </div>
 
+      {state.kind === "ready" && <MarketFilter current={filter} onChange={setFilter} counts={counts} />}
+
       {state.kind === "loading" && (
-        <div className="loading-card">
-          <span className="spinner" /> Reading markets from X Layer…
+        <div className="loading-card" style={{ marginTop: 14 }}>
+          <span className="spinner" /> Loading fixtures…
         </div>
       )}
 
       {state.kind === "error" && (
-        <div className="error-card">
-          <strong>Couldn't load markets</strong> — {state.message}
+        <div className="error-card" style={{ marginTop: 14 }}>
+          <strong>Couldn't load fixtures</strong> — {state.message}
+          <div style={{ marginTop: 6, fontSize: 12, color: "var(--text-3)" }}>
+            Run <code>POST /admin/sync-fixtures</code> if the DB is empty.
+          </div>
         </div>
       )}
 
-      {state.kind === "ready" && state.markets.length === 0 && (
-        <div className="preview-empty">No markets created yet on this deployment.</div>
+      {state.kind === "ready" && filtered.length === 0 && (
+        <div className="preview-empty" style={{ marginTop: 14 }}>
+          No fixtures in this category yet.
+        </div>
       )}
 
-      {state.kind === "ready" && state.markets.length > 0 && (
+      {state.kind === "ready" && filtered.length > 0 && (
         <div className="match-grid">
-          {state.markets.map((m) => (
-            <MarketCard key={m.id} m={m} />
+          {filtered.map((f) => (
+            <FixtureCard key={f.id} f={f} />
           ))}
         </div>
       )}
@@ -85,63 +120,98 @@ export function MatchList() {
   );
 }
 
-function MarketCard({ m }: { m: MarketView }) {
-  const { home, away } = parseMatchId(m.matchId);
-  const outcomeLabels =
-    m.outcomeCount === 2 ? OUTCOME_LABELS_2 : m.outcomeCount === 3 ? OUTCOME_LABELS_3 : null;
-  const totalPotUsdc = formatUsdcPot(m.totalPot);
+function FixtureCard({ f }: { f: FixtureRecord }) {
+  const live = isLiveStatus(f.status);
+  const done = isFinishedStatus(f.status);
+  const winningSide =
+    done && f.home.goals !== null && f.away.goals !== null
+      ? f.home.goals > f.away.goals
+        ? "home"
+        : f.away.goals > f.home.goals
+          ? "away"
+          : "draw"
+      : null;
 
   return (
-    <div className="match-card">
+    <div className={`match-card${live ? " match-card-live" : ""}`}>
       <div className="match-card-header">
-        <span className="match-id-label">Market #{m.id}</span>
-        <span className={`status-pill status-${m.status.toLowerCase()}`}>{m.status}</span>
+        <span className="match-id-label">
+          {f.round}
+          {f.market && ` · M#${f.market.marketId}`}
+        </span>
+        <span className={`status-pill ${pillClass(f.status)}`}>
+          {live && <span style={{ color: "var(--success)", marginRight: 4 }}>●</span>}
+          {statusLabel(f.status)}
+        </span>
       </div>
 
       <div className="match-teams">
-        {home && away ? (
-          <>
-            <div className="team-side">
-              <div className="team-flag">{flagFor(home)}</div>
-              <div className="team-code">{home}</div>
-            </div>
+        <div className={`team-side${winningSide === "home" ? " team-winner" : ""}`}>
+          <Image
+            src={f.home.logo}
+            alt={f.home.name}
+            width={48}
+            height={48}
+            unoptimized
+            className="team-logo"
+          />
+          <div className="team-code">{f.home.name}</div>
+        </div>
+        <div className="match-score">
+          {f.home.goals !== null && f.away.goals !== null ? (
+            <>
+              <span className="score-num">{f.home.goals}</span>
+              <span className="score-dash">–</span>
+              <span className="score-num">{f.away.goals}</span>
+              {f.penalty && (
+                <div className="score-pen">
+                  (P {f.penalty.home}–{f.penalty.away})
+                </div>
+              )}
+            </>
+          ) : (
             <div className="vs">vs</div>
-            <div className="team-side">
-              <div className="team-flag">{flagFor(away)}</div>
-              <div className="team-code">{away}</div>
-            </div>
-          </>
-        ) : (
-          <div style={{ fontSize: 16, fontWeight: 600 }}>{m.matchId}</div>
-        )}
-      </div>
-
-      <div className="match-pots">
-        {Array.from({ length: m.outcomeCount }, (_, idx) => {
-          const label = outcomeLabels?.[idx] ?? `Outcome ${idx}`;
-          const pot = m.outcomePots[idx] ?? 0n;
-          const pct = m.totalPot > 0n ? Number((pot * 1000n) / m.totalPot) / 10 : 0;
-          const isWinner = m.status === "Settled" && m.winningOutcome === idx;
-          return (
-            <div key={idx} className={`pot-row${isWinner ? " pot-row-winner" : ""}`}>
-              <span className="pot-label">{label}</span>
-              <span className="pot-bar-wrap">
-                <span className="pot-bar" style={{ width: `${pct}%` }} />
-              </span>
-              <span className="pot-amount">{formatUsdcPot(pot)}</span>
-            </div>
-          );
-        })}
+          )}
+        </div>
+        <div className={`team-side${winningSide === "away" ? " team-winner" : ""}`}>
+          <Image
+            src={f.away.logo}
+            alt={f.away.name}
+            width={48}
+            height={48}
+            unoptimized
+            className="team-logo"
+          />
+          <div className="team-code">{f.away.name}</div>
+        </div>
       </div>
 
       <div className="match-footer">
+        <span className="match-meta">{formatDateLine(f.date)}</span>
         <span className="match-meta">
-          Total pot <strong>{totalPotUsdc} USDC</strong>
-        </span>
-        <span className="match-meta">
-          {m.status === "Open" ? `closes in ${formatCloseIn(m.closeTime)}` : "—"}
+          {f.venue ? `${f.venue.city}` : "—"}
+          {f.market ? " · on-chain" : " · pending"}
         </span>
       </div>
     </div>
   );
+}
+
+function pillClass(s: string): string {
+  if (isLiveStatus(s as any)) return "status-live";
+  if (isFinishedStatus(s as any)) return "status-settled";
+  return "status-open";
+}
+
+function formatDateLine(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: sameYear ? undefined : "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }

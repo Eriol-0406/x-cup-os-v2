@@ -37,8 +37,14 @@ maybeGenerateBurnerKey();
 
 const EnvSchema = z.object({
   GROQ_API_KEY: z.string().min(10, "GROQ_API_KEY missing — set it in .env"),
-  API_FOOTBALL_KEY: z.string().min(10).optional(),
+  API_FOOTBALL_KEY: z.string().min(10, "API_FOOTBALL_KEY missing — set it in .env"),
   API_FOOTBALL_HOST: z.string().default("v3.football.api-sports.io"),
+  // Default to WC 2022 (Qatar) — only WC season our free tier can access.
+  // Change to 2026 once you upgrade to a paid plan; everything else stays the same.
+  WC_LEAGUE_ID: z.coerce.number().int().default(1),
+  WC_SEASON: z.coerce.number().int().default(2022),
+  // Cache TTL for fixture data (seconds) — protects the 100 req/day budget.
+  FIXTURE_CACHE_TTL: z.coerce.number().int().default(3600),
   XLAYER_TESTNET_RPC: z.string().url().default("https://testrpc.xlayer.tech"),
   XLAYER_CHAIN_ID: z.coerce.number().int().default(1952),
   DATABASE_URL: z.string().default("file:./dev.db"),

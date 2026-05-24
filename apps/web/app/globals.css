@@ -447,6 +447,53 @@ textarea.strategy-input::placeholder { color: var(--text-3); }
   min-width: 200px;
 }
 
+/* ---- Filter pills ---- */
+.filter-pills {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  color: var(--text-2);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.filter-pill:hover {
+  border-color: var(--border-hover);
+  color: var(--text-1);
+}
+.filter-pill-active {
+  background: var(--bg-2);
+  border-color: var(--accent-dim);
+  color: var(--text-1);
+}
+.filter-pill-icon {
+  font-size: 8px;
+  line-height: 1;
+}
+.filter-pill-count {
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--bg-0);
+}
+.filter-pill-active .filter-pill-count {
+  background: var(--accent-dim);
+  color: var(--text-1);
+}
+
 /* ---- Match cards ---- */
 .match-grid {
   display: grid;
@@ -464,6 +511,58 @@ textarea.strategy-input::placeholder { color: var(--text-3); }
   transition: border-color 0.15s;
 }
 .match-card:hover { border-color: var(--border-hover); }
+.match-card-live {
+  border-color: rgba(74, 222, 128, 0.4);
+  box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.1);
+}
+
+.status-live {
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--success);
+}
+
+.team-logo {
+  border-radius: 4px;
+  object-fit: contain;
+  background: var(--bg-0);
+  padding: 4px;
+}
+.team-winner .team-code { color: var(--success); }
+.team-winner .team-logo {
+  box-shadow: 0 0 0 2px var(--success);
+}
+
+.match-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 70px;
+}
+.score-num {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.score-dash {
+  font-size: 18px;
+  color: var(--text-3);
+  margin: 0 6px;
+}
+.match-score .vs {
+  font-size: 12px;
+}
+.match-score .score-num + .score-dash + .score-num {
+  display: inline;
+}
+.match-score > span:first-child { display: inline-block; }
+.score-pen {
+  font-size: 10px;
+  color: var(--text-3);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
 
 .match-card-header {
   display: flex;

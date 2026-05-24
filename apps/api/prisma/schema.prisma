@@ -62,6 +62,48 @@ model StrategyFire {
   @@index([status])
 }
 
+/// Mirror of an API-Football fixture (one of the 64 WC 2022 or 104 WC 2026
+/// matches). Updated by the sync service from /fixtures?league=X&season=Y.
+/// Source of truth for matchups, scores, status — the on-chain market is
+/// pure betting state.
+model Fixture {
+  id              Int       @id              // API-Football fixture id
+  date            DateTime
+  status          String                     // NS | 1H | HT | 2H | ET | P | FT | AET | PEN | PST | CANC | ABD
+  round           String                     // "Group Stage - 1", "Round of 16", "Final", etc
+  homeTeamId      Int
+  homeTeamName    String
+  homeTeamLogo    String
+  awayTeamId      Int
+  awayTeamName    String
+  awayTeamLogo    String
+  homeGoals       Int?
+  awayGoals       Int?
+  penaltyHome     Int?
+  penaltyAway     Int?
+  venueName       String?
+  venueCity       String?
+  group           String?                    // "Group A", "Group B", ...
+  rawJson         String                     // full API response for any extra data we need later
+  updatedAt       DateTime  @updatedAt
+  market          FixtureMarket?
+
+  @@index([status])
+  @@index([date])
+  @@index([round])
+}
+
+/// Mapping table: which on-chain marketId corresponds to which API-Football
+/// fixtureId. Created when admin runs POST /admin/create-markets.
+model FixtureMarket {
+  fixtureId       Int       @id
+  fixture         Fixture   @relation(fields: [fixtureId], references: [id])
+  marketId        Int       @unique          // on-chain XCupMarket id
+  outcomeCount    Int                        // 2 (knockout) or 3 (group)
+  createMarketTx  String
+  createdAt       DateTime  @default(now())
+}
+
 /// One row per claim event (after market settlement). Auto-created by the
 /// oracle settle flow when a strategy has winning stakes on a market.
 model Claim {

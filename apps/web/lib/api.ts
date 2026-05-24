@@ -136,3 +136,60 @@ export async function listFiresByWallet(walletAddress: string): Promise<FireReco
   if (!json.ok) throw new Error(json.error ?? "Failed to list fires");
   return json.fires as FireRecord[];
 }
+
+/* ---- Fixtures (API-Football mirror) ---- */
+
+export type FixtureStatus = "NS" | "1H" | "HT" | "2H" | "ET" | "P" | "BT" | "FT" | "AET" | "PEN" | "PST" | "TBD" | "CANC" | "ABD";
+
+export interface FixtureRecord {
+  id: number;
+  date: string;
+  status: FixtureStatus;
+  round: string;
+  home: { id: number; name: string; logo: string; goals: number | null };
+  away: { id: number; name: string; logo: string; goals: number | null };
+  penalty: { home: number; away: number } | null;
+  venue: { name: string; city: string } | null;
+  market: {
+    marketId: number;
+    outcomeCount: number;
+    createTx: string;
+  } | null;
+}
+
+export type FixtureStatusFilter = "all" | "live" | "upcoming" | "finished";
+
+export async function listFixtures(filter: FixtureStatusFilter = "all"): Promise<FixtureRecord[]> {
+  const res = await fetch(`${API_URL}/fixtures?status=${filter}&take=200`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to list fixtures");
+  return json.fixtures as FixtureRecord[];
+}
+
+export function isLiveStatus(s: FixtureStatus): boolean {
+  return ["1H", "HT", "2H", "ET", "P", "BT"].includes(s);
+}
+
+export function isFinishedStatus(s: FixtureStatus): boolean {
+  return ["FT", "AET", "PEN"].includes(s);
+}
+
+export function statusLabel(s: FixtureStatus): string {
+  const map: Record<string, string> = {
+    NS: "Upcoming",
+    "1H": "Live · 1H",
+    HT: "Half-time",
+    "2H": "Live · 2H",
+    ET: "Extra Time",
+    P: "Penalties",
+    BT: "Break",
+    FT: "Final",
+    AET: "After Extra Time",
+    PEN: "After Penalties",
+    PST: "Postponed",
+    TBD: "TBD",
+    CANC: "Cancelled",
+    ABD: "Abandoned",
+  };
+  return map[s] ?? s;
+}
