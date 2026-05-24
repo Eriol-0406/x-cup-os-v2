@@ -5,8 +5,24 @@ import { settleAndClaim } from "../lib/oracle.js";
 import { syncFixtures, createMissingMarkets } from "../lib/fixtureSync.js";
 import { fetchAccountStatus } from "../lib/apiFootball.js";
 import { replayFixture } from "../lib/replay.js";
+import { backfillTargets } from "../lib/strategyResolver.js";
 
 export const adminRouter = Router();
+
+/**
+ * POST /admin/backfill-targets — re-resolve targetMarketIds for every existing
+ * Strategy. Useful after wiping/seeding fixtures or after a deploy that
+ * predated Phase-2 strategy ↔ fixture resolution.
+ */
+adminRouter.post("/backfill-targets", async (_req, res) => {
+  try {
+    const result = await backfillTargets();
+    return res.json({ ok: true, ...result });
+  } catch (err: any) {
+    console.error("[POST /admin/backfill-targets]", err);
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
 
 /**
  * GET /admin/api-status — API-Football account/quota debug info.

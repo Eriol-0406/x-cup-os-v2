@@ -160,8 +160,14 @@ async function preflightChecks(
 }
 
 /**
- * Find every active strategy whose trigger matches the given event, then fire them.
- * Used by the admin endpoint to simulate match outcomes during the demo.
+ * Find every active strategy whose trigger matches the given event AND whose
+ * targetMarketIds includes the event's marketId, then fire them.
+ *
+ * The two filters together mean a strategy fires when:
+ *   1. Its trigger logically matches what happened (team won, player scored, etc.)
+ *   2. The on-chain market is one we resolved at deploy time from the strategy's
+ *      team mentions. Prevents "Argentina wins" from firing on a France vs
+ *      Brazil match just because Argentina won some OTHER match the same day.
  */
 export async function processMatchEvent(ev: MatchEvent): Promise<FireResult[]> {
   const actives = await prisma.strategy.findMany({
@@ -171,8 +177,19 @@ export async function processMatchEvent(ev: MatchEvent): Promise<FireResult[]> {
 
   const fires: FireResult[] = [];
   for (const s of actives) {
+    // Targeting filter — empty targetMarketIds means the strategy resolved to
+    // no on-chain markets and intentionally won't fire.
+    let targets: number[] = [];
+    try {
+      targets = JSON.parse(s.targetMarketIds);
+    } catch {
+      /* fall through to empty */
+    }
+    if (targets.length > 0 && !targets.includes(ev.marketId)) continue;
+
     const parsed = JSON.parse(s.parsedJson) as ParsedStrategy;
     if (!triggerMatches(parsed, ev)) continue;
+
     try {
       const r = await fireStrategy(s.id, ev);
       fires.push(r);

@@ -5,6 +5,7 @@ import { ParsedStrategy } from "@x-cup/types";
 import { prisma } from "../db.js";
 import { parseStrategy } from "../parser.js";
 import { ensureUserWithAgent } from "../lib/burner.js";
+import { resolveStrategyTargets } from "../lib/strategyResolver.js";
 
 export const strategiesRouter = Router();
 
@@ -70,6 +71,10 @@ strategiesRouter.post("/", async (req, res) => {
     const dbUser = await prisma.user.findUnique({ where: { mainWallet: user.mainWallet } });
     if (!dbUser) return res.status(500).json({ ok: false, error: "user upsert failed" });
 
+    // Phase-2: resolve team mentions → on-chain marketIds at deploy time.
+    // If empty, the strategy still saves but won't fire (frontend warns the user).
+    const targetMarketIds = await resolveStrategyTargets(validated.data);
+
     const strategy = await prisma.strategy.create({
       data: {
         userId: dbUser.id,
@@ -77,6 +82,7 @@ strategiesRouter.post("/", async (req, res) => {
         parsedJson: JSON.stringify(validated.data),
         status: "draft",
         maxLossUsdc: validated.data.riskLimits.maxLossUsdc ?? null,
+        targetMarketIds: JSON.stringify(targetMarketIds),
       },
     });
     return res.json({ ok: true, strategy: serializeStrategy(strategy) });
@@ -172,8 +178,15 @@ function serializeStrategy(s: {
   fireCount: number;
   maxLossUsdc: number | null;
   currentPnlUsdc: number;
+  targetMarketIds: string;
   createdAt: Date;
 }) {
+  let targetMarketIds: number[] = [];
+  try {
+    targetMarketIds = JSON.parse(s.targetMarketIds);
+  } catch {
+    /* ignore */
+  }
   return {
     id: s.id,
     englishText: s.englishText,
@@ -182,6 +195,7 @@ function serializeStrategy(s: {
     fireCount: s.fireCount,
     maxLossUsdc: s.maxLossUsdc,
     currentPnlUsdc: s.currentPnlUsdc,
+    targetMarketIds,
     createdAt: s.createdAt.toISOString(),
   };
 }

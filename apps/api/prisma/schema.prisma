@@ -33,6 +33,10 @@ model Strategy {
   maxLossUsdc   Float?    // copied out of parsedJson.riskLimits for fast queries
   currentPnlUsdc Float    @default(0)
   fireCount     Int       @default(0)
+  /// JSON array of on-chain market ids this strategy is allowed to fire on.
+  /// Resolved at deploy time from the team names in parsedJson.trigger.conditions.
+  /// Empty array = no resolvable fixtures → strategy never fires.
+  targetMarketIds String  @default("[]")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   fires         StrategyFire[]
