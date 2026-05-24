@@ -1,23 +1,33 @@
 import Groq from "groq-sdk";
 import { ParsedStrategy, PARSED_STRATEGY_TOOL_SCHEMA } from "@x-cup/types";
 import { env } from "./env.js";
+import { getCachedTeams, formatTeamsForPrompt } from "./lib/teams.js";
 
 const groq = new Groq({ apiKey: env.GROQ_API_KEY });
 
 /**
- * System prompt for the parser. Kept terse on purpose — Groq's free tier is
- * generous but every token still costs latency, and the live-preview UX wants
- * sub-300ms. The tool schema does the heavy lifting; the prompt just sets
- * domain context and a few hard rules.
+ * System prompt builder for the parser. The team list is injected at call
+ * time so the LLM normalizes user aliases ("Les Bleus", "Three Lions",
+ * "La Albiceleste") into the canonical names from API-Football. This is
+ * what makes the strategy resolver in lib/strategyResolver.ts reliable —
+ * its contains-fuzzy compare against Fixture.{home,away}TeamName fails on
+ * unnormalized aliases.
+ *
+ * Kept terse — Groq's free tier is generous but every token costs latency.
  */
-const SYSTEM_PROMPT = `You are the strategy parser for X-Cup OS, a World Cup betting dApp.
+function buildSystemPrompt(teamList: string): string {
+  const teamSection = teamList
+    ? `\n\nCanonical team names for the current World Cup (use these EXACT spellings — map common aliases to the canonical name, e.g. "Les Bleus" → "France", "Three Lions" → "England", "La Albiceleste" → "Argentina", "Selecao" → "Brazil"):\n${teamList}`
+    : "";
+
+  return `You are the strategy parser for X-Cup OS, a World Cup betting dApp.
 
 Your only job: convert the user's English betting strategy into the exact JSON
 shape required by submit_parsed_strategy. Call that tool exactly once. Do not
 add commentary.
 
 Rules:
-- Team names: use the standard short name the user wrote (e.g. "France", "Argentina", "Brazil").
+- Team names: MUST be the canonical name from the list below if any list is provided. Map common aliases / nicknames to their canonical name. If the user mentions a team not in the list, use the closest match (single best guess).
 - Player names: keep as written (e.g. "Mbappe", "Messi").
 - marketRef: a short snake_case slug describing the market (e.g. "france_reaches_final", "argentina_wins_qf").
 - outcome must be either YES or NO — coerce other phrasings.
@@ -35,7 +45,8 @@ If the strategy is ambiguous or you can't fill required fields, still call
 the tool with your best guess — server-side validation will reject anything
 truly invalid, and the user can iterate.
 
-Be deterministic: same input ⇒ same output.`;
+Be deterministic: same input ⇒ same output.${teamSection}`;
+}
 
 export interface ParseResult {
   ok: true;
@@ -58,12 +69,13 @@ export interface ParseFailure {
  */
 export async function parseStrategy(englishText: string): Promise<ParseResult | ParseFailure> {
   const t0 = Date.now();
+  const systemPrompt = buildSystemPrompt(formatTeamsForPrompt(getCachedTeams()));
 
   const response = await groq.chat.completions.create({
     model: env.GROQ_MODEL,
     temperature: 0, // deterministic
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       { role: "user", content: englishText },
     ],
     tools: [{ type: "function", function: PARSED_STRATEGY_TOOL_SCHEMA }],

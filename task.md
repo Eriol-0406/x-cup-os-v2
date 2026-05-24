@@ -66,8 +66,10 @@ Switching to live WC 2026 once API-Football plan is upgraded = change `WC_SEASON
 ### Strategy ↔ fixture mapping (DONE)
 - [x] **Strategy targets specific fixtures** — on deploy, backend resolves team mentions → matching `Fixture` rows → `marketId[]`, persists `Strategy.targetMarketIds`, `processMatchEvent` filters on it. "If Argentina wins" now fires only on Argentina matches, never on a France-vs-Brazil event. `POST /admin/backfill-targets` re-resolves existing strategies. · `04d1964`
 
+### Team-aware parser (DONE)
+- [x] **Parser knows real teams** — `apps/api/src/lib/teams.ts` fetches `/teams?league=1&season=2022` (32 teams), 24h in-memory cache, pre-warmed at API boot. Groq system prompt now lists canonical team names so LLM normalizes aliases ("Les Bleus" → "France", "La Albiceleste" → "Argentina", "Three Lions" → "England", "Selecao" → "Brazil"). Verified end-to-end: all three aliases resolve to the correct canonical name and the strategy resolver finds the right markets. · _commit on next push_
+
 ### Still to do
-- [ ] **Parser knows real teams** — fetch team list from API-Football, augment Groq system prompt with canonical WC team names so LLM emits real team strings (less reliance on contains-fuzzy matching in the resolver)
 - [ ] **Live polling cron** — backend polls `/fixtures?live=all` every N minutes, detects status transition to FT/AET/PEN, auto-replays the fixture. Mostly valuable for live WC 2026; the historical replay covers the WC 2022 demo.
 - [ ] **Stronger RPC propagation handling** — replace 800ms / 1500ms `setTimeout` workarounds with `provider.waitForTransaction({confirmations: 2})` OR move to log-subscription / event-driven flow
 

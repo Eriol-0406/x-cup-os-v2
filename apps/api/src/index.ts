@@ -5,6 +5,7 @@ import { strategiesRouter } from "./routes/strategies.js";
 import { usersRouter } from "./routes/users.js";
 import { adminRouter } from "./routes/admin.js";
 import { fixturesRouter } from "./routes/fixtures.js";
+import { warmupTeamCache } from "./lib/teams.js";
 
 const app = express();
 
@@ -24,4 +25,7 @@ app.listen(env.PORT, () => {
   console.log(`✅ x-cup-os api listening on http://localhost:${env.PORT}`);
   console.log(`   parser model: ${env.GROQ_MODEL}`);
   console.log(`   db: ${env.DATABASE_URL}`);
+  console.log(`   wc: league ${env.WC_LEAGUE_ID} season ${env.WC_SEASON}`);
+  // Pre-warm the team cache so the first /strategies/parse doesn't pay the round-trip.
+  void warmupTeamCache();
 });

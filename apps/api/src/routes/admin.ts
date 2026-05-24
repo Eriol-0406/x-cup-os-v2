@@ -6,6 +6,7 @@ import { syncFixtures, createMissingMarkets } from "../lib/fixtureSync.js";
 import { fetchAccountStatus } from "../lib/apiFootball.js";
 import { replayFixture } from "../lib/replay.js";
 import { backfillTargets } from "../lib/strategyResolver.js";
+import { fetchWCTeams, getCachedTeams } from "../lib/teams.js";
 
 export const adminRouter = Router();
 
@@ -21,6 +22,28 @@ adminRouter.post("/backfill-targets", async (_req, res) => {
   } catch (err: any) {
     console.error("[POST /admin/backfill-targets]", err);
     return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+/**
+ * GET /admin/teams — view the currently-cached team list. Helpful for
+ * debugging why a strategy resolved to N markets.
+ */
+adminRouter.get("/teams", async (_req, res) => {
+  const cached = getCachedTeams();
+  return res.json({ ok: true, cached: cached.length, teams: cached });
+});
+
+/**
+ * POST /admin/teams/refresh — force a fresh fetch from API-Football.
+ * Uses 1 of the daily 100 request budget.
+ */
+adminRouter.post("/teams/refresh", async (_req, res) => {
+  try {
+    const teams = await fetchWCTeams(true);
+    return res.json({ ok: true, refreshed: teams.length });
+  } catch (err: any) {
+    return res.status(502).json({ ok: false, error: err?.message ?? String(err) });
   }
 });
 
