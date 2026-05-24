@@ -57,18 +57,18 @@ Switching to live WC 2026 once API-Football plan is upgraded = change `WC_SEASON
 
 ---
 
-## Phase 2 — Real-time + auto-settlement (NEXT)
+## Phase 2 — Real-time + auto-settlement
 
-### Live polling + auto-settle
-- [ ] **Live polling cron** — backend polls `/fixtures?live=all` every N minutes, updates `Fixture.status` in DB, no API hit when cached
-- [ ] **Auto-settle on FT/AET/PEN** — detect status transition, call oracle `settle(marketId, winningOutcome)` using `fixtureToOutcomeIdx()` from `apiFootball.ts`, cascade to existing auto-claim flow
-- [ ] **Replay endpoint for historical demo** — POST `/admin/replay-fixture/:fixtureId` pulls the historical result, settles the on-chain market, triggers any strategy fires that match. Powers the "time-machine" WC 2022 demo.
+### Demo replay flow (DONE)
+- [x] **Replay endpoint** — `POST /admin/replay-fixture/:id` pulls the real historical outcome from API-Football, fires matching strategies on-chain, settles the market, auto-claims for winners. UI "Replay this match →" button on every finished fixture card. · `15736f1`
+- [x] **Penalty-aware evaluator** — `MatchEvent.penaltyHome/penaltyAway` propagated through, `match_winner` correctly recognizes knockout penalty winners (e.g. ARG-FRA final 3-3 P 4-2). · `15736f1`
 
-### Strategy ↔ fixture mapping
-- [ ] **Parser knows real teams** — fetch team list from API-Football, augment Groq system prompt (or pass as tool params), LLM emits canonical team IDs not just strings
-- [ ] **Strategy targets specific fixtures** — on deploy, backend resolves team mentions → fixture(s) → market(s), `Strategy.targetMarketIds[]` in DB, evaluator scopes to those markets only
+### Strategy ↔ fixture mapping (DONE)
+- [x] **Strategy targets specific fixtures** — on deploy, backend resolves team mentions → matching `Fixture` rows → `marketId[]`, persists `Strategy.targetMarketIds`, `processMatchEvent` filters on it. "If Argentina wins" now fires only on Argentina matches, never on a France-vs-Brazil event. `POST /admin/backfill-targets` re-resolves existing strategies. · `04d1964`
 
-### Race-condition cleanup
+### Still to do
+- [ ] **Parser knows real teams** — fetch team list from API-Football, augment Groq system prompt with canonical WC team names so LLM emits real team strings (less reliance on contains-fuzzy matching in the resolver)
+- [ ] **Live polling cron** — backend polls `/fixtures?live=all` every N minutes, detects status transition to FT/AET/PEN, auto-replays the fixture. Mostly valuable for live WC 2026; the historical replay covers the WC 2022 demo.
 - [ ] **Stronger RPC propagation handling** — replace 800ms / 1500ms `setTimeout` workarounds with `provider.waitForTransaction({confirmations: 2})` OR move to log-subscription / event-driven flow
 
 ---
