@@ -79,11 +79,19 @@ Switching to live WC 2026 once API-Football plan is upgraded = change `WC_SEASON
 
 ---
 
-## Phase 3 — Submission polish (LATER)
+## Phase 3 — Submission polish
 
+### Day-7 end-to-end smoke test (DONE)
+- [x] **Smoke test** — every flow walked end-to-end on `main`. Findings:
+  - ✅ Servers, API, fixtures, tournament markets, agent, parser, end-to-end fire/settle/claim all green
+  - 🐛 Found + fixed: LLM emitted `team: "opponent"` for "if X loses" strategies (prompt strengthened, stale strategies cleaned)
+  - 🐛 Found + fixed: tournament cards had no claim button (added)
+  - 📄 Wrote `DEMO.md` with exact narration, UI actions, expected outcomes, on-chain proof links, and backup recovery steps
+  - · _commit on next push_
+
+### Still to do
 - [ ] **Leaderboard + copy-strategy** — top public strategies ranked by PnL, "copy this agent" clones rules into current user's account · _spec-marked scope-cuttable: first feature to drop if Day 7 checkpoint is at risk_
-- [ ] **Day-7 end-to-end smoke test** — document the exact happy-path sequence for the demo video, screenshot every UI state, verify every explorer link works
-- [ ] **Demo video + submission package** — pre-recorded (per spec Risk 5: no live demos), Twitter thread with on-chain proof, submit 24h before deadline
+- [ ] **Demo video + submission package** — pre-recorded (per spec Risk 5: no live demos), follow `DEMO.md` script, Twitter thread with on-chain proof, submit 24h before deadline. _Recording requires you behind the camera — script is ready._
 
 ---
 

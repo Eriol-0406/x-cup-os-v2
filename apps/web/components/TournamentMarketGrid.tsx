@@ -117,6 +117,7 @@ function TeamCard({ m, onAfterStake }: { m: TournamentMarketRecord; onAfterStake
   const { state: walletState, connect } = useWallet();
   const [amount, setAmount] = useState(DEFAULT_STAKE);
   const [stake, setStake] = useState<StakeState>({ kind: "idle" });
+  const [claim, setClaim] = useState<StakeState>({ kind: "idle" });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const probPercent = (m.impliedYesProb * 100).toFixed(0);
@@ -193,6 +194,36 @@ function TeamCard({ m, onAfterStake }: { m: TournamentMarketRecord; onAfterStake
 
   const busy = stake.kind === "approving" || stake.kind === "sending";
 
+  const onClaim = async () => {
+    if (walletState.kind !== "connected") {
+      void connect();
+      return;
+    }
+    setClaim({ kind: "sending" });
+    clearTimer();
+    timeoutRef.current = setTimeout(() => {
+      setClaim({ kind: "error", message: "Timed out — wallet popup closed or no response." });
+    }, WALLET_TIMEOUT_MS);
+    try {
+      const signer = await signerProvider();
+      const xcup = xcupMarket(signer) as any;
+      const tx = await xcup.claim(m.marketId);
+      setClaim({ kind: "sending", txHash: tx.hash });
+      await tx.wait();
+      clearTimer();
+      setClaim({ kind: "done", txHash: tx.hash });
+      onAfterStake();
+    } catch (err: any) {
+      clearTimer();
+      const code = err?.code;
+      const userRejected = code === 4001 || /rejected|denied|user closed|user cancel/i.test(err?.message ?? "");
+      setClaim({
+        kind: "error",
+        message: userRejected ? "Claim rejected" : err?.shortMessage ?? err?.message ?? "Claim failed",
+      });
+    }
+  };
+
   return (
     <div className={`tourney-card${isWinner ? " tourney-card-winner" : ""}${isLoser ? " tourney-card-loser" : ""}`}>
       <div className="tourney-head">
@@ -245,6 +276,45 @@ function TeamCard({ m, onAfterStake }: { m: TournamentMarketRecord; onAfterStake
           >
             NO
           </button>
+        </div>
+      )}
+
+      {m.settled && claim.kind !== "done" && (
+        <div className="tourney-bet-row" style={{ gridTemplateColumns: "1fr" }}>
+          <button
+            className={`tourney-bet-btn ${isWinner ? "tourney-bet-yes" : "tourney-bet-no"}`}
+            onClick={onClaim}
+            disabled={claim.kind === "sending"}
+            title={`Pull your share of the ${isWinner ? "YES" : "NO"} pot for ${m.teamName}`}
+          >
+            {claim.kind === "sending" ? "Claiming…" : "Claim winnings"}
+          </button>
+        </div>
+      )}
+
+      {claim.kind !== "idle" && (
+        <div className="tourney-status">
+          {claim.kind === "sending" && (
+            <>
+              <span className="spinner" /> Claiming…
+              <button className="tourney-cancel" onClick={() => { clearTimer(); setClaim({ kind: "idle" }); }}>
+                cancel
+              </button>
+            </>
+          )}
+          {claim.kind === "done" && (
+            <span style={{ color: "var(--success)" }}>
+              ✓ Claimed · <a href={`${EXPLORER}/tx/${claim.txHash}`} target="_blank" rel="noreferrer">tx</a>
+            </span>
+          )}
+          {claim.kind === "error" && (
+            <>
+              <span style={{ color: "var(--error)", flex: 1 }}>✗ {claim.message}</span>
+              <button className="tourney-cancel" onClick={() => setClaim({ kind: "idle" })}>
+                dismiss
+              </button>
+            </>
+          )}
         </div>
       )}
 

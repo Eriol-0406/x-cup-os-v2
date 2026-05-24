@@ -69,7 +69,7 @@ export function Header() {
     <header className="header">
       <div className="container header-inner">
         <div className="logo">
-          <span className="logo-dot" />
+          <img src="/logo.png" alt="X-Cup Logo" style={{ width: 48, height: 48, borderRadius: '4px', objectFit: 'contain', margin: '0 8px' }} />
           <span>X-Cup OS</span>
           <span className="logo-sub">/ World Cup betting agents</span>
         </div>
