@@ -174,6 +174,25 @@ export function isFinishedStatus(s: FixtureStatus): boolean {
   return ["FT", "AET", "PEN"].includes(s);
 }
 
+/** Replay a finished fixture — admin endpoint that fires strategies + settles. */
+export interface ReplayResponse {
+  ok: boolean;
+  error?: string;
+  fixture?: { id: number; status: string; home: string; away: string; score: string };
+  matchEvent?: { marketId: number; winningOutcomeIdx: number; scorers: string[] };
+  fires?: Array<{ fireId: string; ok: boolean; txHash?: string; reason?: string }>;
+  settle?: {
+    ok: boolean;
+    settleTx?: string;
+    claims: Array<{ strategyId: string; ok: boolean; txHash?: string; payoutUsdc?: string; reason?: string }>;
+  };
+}
+
+export async function replayFixture(fixtureId: number): Promise<ReplayResponse> {
+  const res = await fetch(`${API_URL}/admin/replay-fixture/${fixtureId}`, { method: "POST" });
+  return (await res.json()) as ReplayResponse;
+}
+
 export function statusLabel(s: FixtureStatus): string {
   const map: Record<string, string> = {
     NS: "Upcoming",

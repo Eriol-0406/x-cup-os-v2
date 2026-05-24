@@ -666,6 +666,39 @@ textarea.strategy-input::placeholder { color: var(--text-3); }
 }
 .match-meta strong { color: var(--text-1); font-weight: 600; }
 
+.replay-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.replay-btn {
+  font-size: 11px;
+  padding: 5px 10px;
+  background: var(--bg-0);
+  color: var(--text-2);
+}
+.replay-btn:hover { color: var(--accent); border-color: var(--accent-dim); }
+.replay-status {
+  font-size: 11px;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.replay-status .spinner { width: 10px; height: 10px; }
+.replay-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.replay-link { font-size: 10px; color: var(--text-3); }
+.replay-link:hover { color: var(--accent); }
+.replay-error { font-size: 11px; color: var(--error); }
+
 /* ---- Footer ---- */
 .footer {
   border-top: 1px solid var(--border);

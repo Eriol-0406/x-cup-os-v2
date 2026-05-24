@@ -48,6 +48,16 @@ export interface ApiFixtureStatus {
   extra?: number | null;
 }
 
+export interface ApiFixtureEvent {
+  time: { elapsed: number; extra: number | null };
+  team: { id: number; name: string; logo: string };
+  player: { id: number | null; name: string | null };
+  assist?: { id: number | null; name: string | null };
+  type: string; // "Goal" | "Card" | "subst" | "Var"
+  detail: string; // "Normal Goal" | "Penalty" | "Yellow Card" | ...
+  comments: string | null;
+}
+
 export interface ApiFixtureRaw {
   fixture: {
     id: number;
@@ -81,6 +91,8 @@ export interface ApiFixtureRaw {
     extratime: { home: number | null; away: number | null };
     penalty: { home: number | null; away: number | null };
   };
+  /** Only present on single-fixture GETs (/fixtures?id=X), not on the bulk list. */
+  events?: ApiFixtureEvent[];
 }
 
 /* -------------------------------------------------------------------------- */
@@ -155,6 +167,15 @@ export async function fetchWorldCupFixtures(): Promise<ApiFixtureRaw[]> {
 export async function fetchFixture(id: number): Promise<ApiFixtureRaw | null> {
   const arr = await get<ApiFixtureRaw[]>("/fixtures", { id });
   return arr[0] ?? null;
+}
+
+/** Extract goal scorers from a fixture's events array. Returns [] if no events. */
+export function extractScorers(f: ApiFixtureRaw): string[] {
+  if (!f.events) return [];
+  return f.events
+    .filter((e) => e.type === "Goal" && e.detail !== "Missed Penalty")
+    .map((e) => e.player?.name ?? "")
+    .filter(Boolean);
 }
 
 /** Live in-progress fixtures across the configured WC. */

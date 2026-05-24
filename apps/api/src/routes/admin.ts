@@ -4,6 +4,7 @@ import { processMatchEvent } from "../lib/firing.js";
 import { settleAndClaim } from "../lib/oracle.js";
 import { syncFixtures, createMissingMarkets } from "../lib/fixtureSync.js";
 import { fetchAccountStatus } from "../lib/apiFootball.js";
+import { replayFixture } from "../lib/replay.js";
 
 export const adminRouter = Router();
 
@@ -116,5 +117,32 @@ adminRouter.post("/settle", async (req, res) => {
   } catch (err: any) {
     console.error("[POST /admin/settle]", err);
     return res.status(500).json({ ok: false, error: err?.message ?? "internal error" });
+  }
+});
+
+/**
+ * POST /admin/replay-fixture/:id
+ *
+ * The Phase-2 "magic moment" endpoint. Takes a finished fixture, derives its
+ * real outcome from API-Football data, fires any matching strategies, then
+ * settles the on-chain market and auto-claims for winners.
+ *
+ *   curl -X POST http://localhost:4000/admin/replay-fixture/855736
+ *
+ * For the WC 2022 demo this is what the UI's "Replay this match" button calls.
+ * For live WC 2026 this same logic gets invoked automatically by the polling
+ * cron when a fixture transitions to FT / AET / PEN.
+ */
+adminRouter.post("/replay-fixture/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    return res.status(400).json({ ok: false, error: "invalid fixture id" });
+  }
+  try {
+    const result = await replayFixture(id);
+    return res.json({ ok: true, ...result });
+  } catch (err: any) {
+    console.error("[POST /admin/replay-fixture]", err);
+    return res.status(400).json({ ok: false, error: err?.message ?? "internal error" });
   }
 });

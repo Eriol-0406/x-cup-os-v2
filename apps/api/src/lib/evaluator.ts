@@ -16,10 +16,13 @@ export interface MatchEvent {
   /** Home and away team display names (for trigger matching). */
   homeTeam: string;
   awayTeam: string;
-  /** Final scores. */
+  /** Regulation-time final scores. */
   homeScore: number;
   awayScore: number;
-  /** Players who scored, lower-cased + trimmed for match-insensitive compare. */
+  /** Penalty shootout result (only present when status == PEN). */
+  penaltyHome?: number;
+  penaltyAway?: number;
+  /** Players who scored. */
   scorers: string[];
 }
 
@@ -62,8 +65,14 @@ function evalCondition(c: TriggerCondition, ev: MatchEvent): boolean {
       const team = normalizeTeam(c.team);
       const home = normalizeTeam(ev.homeTeam);
       const away = normalizeTeam(ev.awayTeam);
-      const winner =
-        ev.homeScore > ev.awayScore ? home : ev.awayScore > ev.homeScore ? away : null; // draw → no winner
+      let winner: string | null = null;
+      if (ev.homeScore > ev.awayScore) winner = home;
+      else if (ev.awayScore > ev.homeScore) winner = away;
+      else if (ev.penaltyHome != null && ev.penaltyAway != null) {
+        // Regulation draw, decided by penalties (knockout). For group-stage
+        // draws (no penalties), winner stays null → trigger doesn't match.
+        winner = ev.penaltyHome > ev.penaltyAway ? home : away;
+      }
       return winner !== null && winner === team;
     }
     case "player_scores": {

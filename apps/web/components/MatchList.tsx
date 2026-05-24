@@ -4,13 +4,17 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   listFixtures,
+  replayFixture,
   isLiveStatus,
   isFinishedStatus,
   statusLabel,
   type FixtureRecord,
   type FixtureStatusFilter,
+  type ReplayResponse,
 } from "@/lib/api";
 import { MarketFilter } from "./MarketFilter";
+
+const EXPLORER = "https://www.oklink.com/x-layer-testnet";
 
 type State =
   | { kind: "loading" }
@@ -120,6 +124,12 @@ export function MatchList() {
   );
 }
 
+type ReplayState =
+  | { kind: "idle" }
+  | { kind: "running" }
+  | { kind: "done"; result: ReplayResponse }
+  | { kind: "error"; message: string };
+
 function FixtureCard({ f }: { f: FixtureRecord }) {
   const live = isLiveStatus(f.status);
   const done = isFinishedStatus(f.status);
@@ -131,6 +141,23 @@ function FixtureCard({ f }: { f: FixtureRecord }) {
           ? "away"
           : "draw"
       : null;
+
+  const [replay, setReplay] = useState<ReplayState>({ kind: "idle" });
+
+  const onReplay = async () => {
+    setReplay({ kind: "running" });
+    try {
+      const result = await replayFixture(f.id);
+      if (result.ok) {
+        setReplay({ kind: "done", result });
+        window.dispatchEvent(new CustomEvent("xcup:replay-done", { detail: { fixtureId: f.id } }));
+      } else {
+        setReplay({ kind: "error", message: result.error ?? "Replay failed" });
+      }
+    } catch (err: any) {
+      setReplay({ kind: "error", message: err?.message ?? "Replay failed" });
+    }
+  };
 
   return (
     <div className={`match-card${live ? " match-card-live" : ""}`}>
@@ -190,9 +217,44 @@ function FixtureCard({ f }: { f: FixtureRecord }) {
         <span className="match-meta">{formatDateLine(f.date)}</span>
         <span className="match-meta">
           {f.venue ? `${f.venue.city}` : "—"}
-          {f.market ? " · on-chain" : " · pending"}
+          {f.market ? ` · M#${f.market.marketId}` : " · pending"}
         </span>
       </div>
+
+      {done && f.market && (
+        <div className="replay-row">
+          {replay.kind === "idle" && (
+            <button className="btn replay-btn" onClick={onReplay} title="Pull this match's real outcome and run the full agent loop on-chain">
+              Replay this match →
+            </button>
+          )}
+          {replay.kind === "running" && (
+            <div className="replay-status">
+              <span className="spinner" /> Firing strategies + settling…
+            </div>
+          )}
+          {replay.kind === "done" && replay.result.ok && (
+            <div className="replay-result">
+              <div style={{ color: "var(--success)", fontWeight: 600, fontSize: 12 }}>
+                ✓ Replayed · {replay.result.fires?.length ?? 0} fire(s) · {replay.result.settle?.claims.length ?? 0} claim(s)
+              </div>
+              {replay.result.settle?.settleTx && replay.result.settle.settleTx.startsWith("0x") && (
+                <a
+                  className="td-mono replay-link"
+                  href={`${EXPLORER}/tx/${replay.result.settle.settleTx}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  settle tx ↗
+                </a>
+              )}
+            </div>
+          )}
+          {replay.kind === "error" && (
+            <div className="replay-error">✗ {replay.message}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
