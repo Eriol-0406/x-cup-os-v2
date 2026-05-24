@@ -3,6 +3,7 @@ import { StrategyEditor } from "@/components/StrategyEditor";
 import { MatchList } from "@/components/MatchList";
 import { ActivityDashboard } from "@/components/ActivityDashboard";
 import { AgentPanel } from "@/components/AgentPanel";
+import { TournamentMarketGrid } from "@/components/TournamentMarketGrid";
 
 export default function HomePage() {
   return (
@@ -24,6 +25,7 @@ export default function HomePage() {
 
         <AgentPanel />
         <StrategyEditor />
+        <TournamentMarketGrid />
         <MatchList />
         <ActivityDashboard />
       </main>

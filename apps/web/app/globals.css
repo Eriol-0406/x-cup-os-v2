@@ -699,6 +699,121 @@ textarea.strategy-input::placeholder { color: var(--text-3); }
 .replay-link:hover { color: var(--accent); }
 .replay-error { font-size: 11px; color: var(--error); }
 
+/* ---- Tournament market grid ---- */
+.tourney-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.tourney-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s;
+}
+.tourney-card:hover { border-color: var(--border-hover); }
+.tourney-card-winner {
+  border-color: var(--success);
+  box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.15);
+}
+.tourney-card-loser { opacity: 0.55; }
+
+.tourney-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tourney-team { flex: 1; min-width: 0; }
+.tourney-team-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tourney-team-code {
+  font-size: 10px;
+  color: var(--text-3);
+  letter-spacing: 0.06em;
+}
+
+.tourney-odds { display: flex; flex-direction: column; gap: 4px; }
+.tourney-bar-wrap {
+  background: var(--bg-0);
+  border-radius: 3px;
+  height: 5px;
+  overflow: hidden;
+}
+.tourney-bar {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-dim), var(--success));
+  transition: width 0.3s ease-out;
+}
+.tourney-prob-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tourney-bet-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  align-items: center;
+}
+.tourney-input {
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  border-radius: 5px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  width: 100%;
+  min-width: 0;
+}
+.tourney-input:focus { border-color: var(--accent-dim); outline: none; }
+.tourney-bet-btn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all 0.12s;
+}
+.tourney-bet-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.tourney-bet-yes {
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--success);
+  border-color: rgba(74, 222, 128, 0.25);
+}
+.tourney-bet-yes:hover:not(:disabled) { background: rgba(74, 222, 128, 0.2); }
+.tourney-bet-no {
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--error);
+  border-color: rgba(248, 113, 113, 0.25);
+}
+.tourney-bet-no:hover:not(:disabled) { background: rgba(248, 113, 113, 0.2); }
+
+.tourney-status {
+  font-size: 11px;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tourney-status .spinner { width: 10px; height: 10px; }
+
 /* ---- Footer ---- */
 .footer {
   border-top: 1px solid var(--border);

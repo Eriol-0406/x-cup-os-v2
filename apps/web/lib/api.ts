@@ -193,6 +193,32 @@ export async function replayFixture(fixtureId: number): Promise<ReplayResponse> 
   return (await res.json()) as ReplayResponse;
 }
 
+/* ---- Pillar 1: tournament-winner markets ---- */
+
+export interface TournamentMarketRecord {
+  teamId: number;
+  teamName: string;
+  teamLogo: string;
+  teamCode: string | null;
+  marketId: number;
+  settled: boolean;
+  winningOutcome: number | null;
+  yesPotUsdc: number;
+  noPotUsdc: number;
+  totalPotUsdc: number;
+  impliedYesProb: number;
+  closeTime: number;
+  createMarketTx: string;
+  error?: string;
+}
+
+export async function listTournamentMarkets(): Promise<TournamentMarketRecord[]> {
+  const res = await fetch(`${API_URL}/tournament-markets`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to list tournament markets");
+  return json.markets as TournamentMarketRecord[];
+}
+
 export function statusLabel(s: FixtureStatus): string {
   const map: Record<string, string> = {
     NS: "Upcoming",

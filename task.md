@@ -67,7 +67,11 @@ Switching to live WC 2026 once API-Football plan is upgraded = change `WC_SEASON
 - [x] **Strategy targets specific fixtures** — on deploy, backend resolves team mentions → matching `Fixture` rows → `marketId[]`, persists `Strategy.targetMarketIds`, `processMatchEvent` filters on it. "If Argentina wins" now fires only on Argentina matches, never on a France-vs-Brazil event. `POST /admin/backfill-targets` re-resolves existing strategies. · `04d1964`
 
 ### Team-aware parser (DONE)
-- [x] **Parser knows real teams** — `apps/api/src/lib/teams.ts` fetches `/teams?league=1&season=2022` (32 teams), 24h in-memory cache, pre-warmed at API boot. Groq system prompt now lists canonical team names so LLM normalizes aliases ("Les Bleus" → "France", "La Albiceleste" → "Argentina", "Three Lions" → "England", "Selecao" → "Brazil"). Verified end-to-end: all three aliases resolve to the correct canonical name and the strategy resolver finds the right markets. · _commit on next push_
+- [x] **Parser knows real teams** — `apps/api/src/lib/teams.ts` fetches `/teams?league=1&season=2022` (32 teams), 24h in-memory cache, pre-warmed at API boot. Groq system prompt now lists canonical team names so LLM normalizes aliases ("Les Bleus" → "France", "La Albiceleste" → "Argentina", "Three Lions" → "England", "Selecao" → "Brazil"). Verified end-to-end: all three aliases resolve to the correct canonical name and the strategy resolver finds the right markets. · `67ffb4c`
+
+### Pillar 1 — Tournament-winner markets (DONE)
+- [x] **32 on-chain binary markets per team** — one "Does <team> win the cup?" market per WC 2022 nation (markets 65-96). matchId pattern `WC2022-WINNER-{teamCode}`. POST `/admin/create-tournament-markets` (idempotent), POST `/admin/settle-tournament` (winning team → YES, others → NO). · _commit on next push_
+- [x] **TournamentMarketGrid UI** — compact card grid above Live Markets. Per card: team logo, name, current implied YES%, total pool, amount input + YES/NO bet buttons. Direct user-wallet stake (no AI agent — these are long-term sentiment bets). Settled markets show CHAMP / OUT badges. Sort by pot / odds / A-Z. 20s auto-refresh. · _commit on next push_
 
 ### Still to do
 - [ ] **Live polling cron** — backend polls `/fixtures?live=all` every N minutes, detects status transition to FT/AET/PEN, auto-replays the fixture. Mostly valuable for live WC 2026; the historical replay covers the WC 2022 demo.

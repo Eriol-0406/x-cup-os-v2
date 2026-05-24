@@ -7,6 +7,7 @@ import { fetchAccountStatus } from "../lib/apiFootball.js";
 import { replayFixture } from "../lib/replay.js";
 import { backfillTargets } from "../lib/strategyResolver.js";
 import { fetchWCTeams, getCachedTeams } from "../lib/teams.js";
+import { createTournamentMarkets, settleTournament } from "../lib/tournamentSync.js";
 
 export const adminRouter = Router();
 
@@ -44,6 +45,47 @@ adminRouter.post("/teams/refresh", async (_req, res) => {
     return res.json({ ok: true, refreshed: teams.length });
   } catch (err: any) {
     return res.status(502).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+/**
+ * POST /admin/create-tournament-markets — Pillar 1 setup. Creates one binary
+ * "Does <team> win the World Cup?" market per team in the cached team list.
+ * Idempotent — skips teams that already have a market for the current season.
+ */
+adminRouter.post("/create-tournament-markets", async (_req, res) => {
+  try {
+    const created = await createTournamentMarkets();
+    return res.json({ ok: true, created: created.length, markets: created });
+  } catch (err: any) {
+    console.error("[POST /admin/create-tournament-markets]", err);
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+const SettleTournamentSchema = z.object({
+  winningTeamId: z.number().int().positive(),
+});
+
+/**
+ * POST /admin/settle-tournament — end-of-tournament oracle action.
+ * Settles every tournament-winner market: the winning team's market goes to
+ * outcome 0 (YES), every other team's market to outcome 1 (NO).
+ *
+ * Stakers claim individually (UI button); this endpoint does NOT auto-claim
+ * to avoid gas-billing the deployer for every staker across 32 markets.
+ */
+adminRouter.post("/settle-tournament", async (req, res) => {
+  const body = SettleTournamentSchema.safeParse(req.body);
+  if (!body.success) {
+    return res.status(400).json({ ok: false, error: "invalid request", issues: body.error.flatten() });
+  }
+  try {
+    const result = await settleTournament(body.data.winningTeamId);
+    return res.json({ ok: true, ...result });
+  } catch (err: any) {
+    console.error("[POST /admin/settle-tournament]", err);
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
   }
 });
 

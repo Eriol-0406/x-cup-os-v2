@@ -108,6 +108,29 @@ model FixtureMarket {
   createdAt       DateTime  @default(now())
 }
 
+/// Pillar 1 — long-term "Team X wins the tournament" outcome shares.
+/// One row per (season, team). Binary YES/NO market on whether the team
+/// lifts the trophy. Settled by oracle when the tournament ends.
+model TournamentMarket {
+  id              String    @id @default(cuid())
+  season          Int                        // env.WC_SEASON snapshot at create
+  teamId          Int                        // API-Football team id
+  teamName        String
+  teamLogo        String
+  teamCode        String?                    // "ARG", "FRA", etc
+  marketId        Int       @unique          // on-chain XCupMarket id
+  outcomeCount    Int       @default(2)      // always binary for tournament-winner
+  createMarketTx  String
+  settled         Boolean   @default(false)
+  /// Set after POST /admin/settle-tournament — 0 if this team won (YES), 1 if not (NO)
+  winningOutcome  Int?
+  createdAt       DateTime  @default(now())
+
+  @@unique([season, teamId])
+  @@index([season])
+  @@index([settled])
+}
+
 /// One row per claim event (after market settlement). Auto-created by the
 /// oracle settle flow when a strategy has winning stakes on a market.
 model Claim {
