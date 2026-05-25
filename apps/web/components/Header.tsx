@@ -93,6 +93,12 @@ export function Header() {
           <Link className="nav-link" href="/bracket">
             Bracket
           </Link>
+          <Link className="nav-link" href="/standings">
+            Standings
+          </Link>
+          <Link className="nav-link" href="/top-scorers">
+            Scorers
+          </Link>
           <Link className="nav-link" href="/leaderboard">
             Leaderboard
           </Link>

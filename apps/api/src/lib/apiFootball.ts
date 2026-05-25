@@ -187,6 +187,46 @@ export async function fetchLiveFixtures(): Promise<ApiFixtureRaw[]> {
   });
 }
 
+/* -------------------------------------------------------------------------- */
+/* Standings + top scorers (cached the same way as fixtures)                  */
+/* -------------------------------------------------------------------------- */
+
+export interface ApiStandingsTeam {
+  rank: number;
+  team: { id: number; name: string; logo: string };
+  points: number;
+  goalsDiff: number;
+  group: string;
+  form: string | null;
+  status: string;
+  description: string | null;
+  all: { played: number; win: number; draw: number; lose: number; goals: { for: number; against: number } };
+}
+
+export async function fetchStandings(): Promise<ApiStandingsTeam[][]> {
+  const arr = await get<Array<{ league: { standings: ApiStandingsTeam[][] } }>>("/standings", {
+    league: env.WC_LEAGUE_ID,
+    season: env.WC_SEASON,
+  });
+  return arr[0]?.league.standings ?? [];
+}
+
+export interface ApiTopScorerRow {
+  player: { id: number; name: string; photo: string; nationality: string };
+  statistics: Array<{
+    team: { id: number; name: string; logo: string };
+    goals: { total: number; assists: number | null };
+    games: { appearences: number; minutes: number };
+  }>;
+}
+
+export async function fetchTopScorers(): Promise<ApiTopScorerRow[]> {
+  return get<ApiTopScorerRow[]>("/players/topscorers", {
+    league: env.WC_LEAGUE_ID,
+    season: env.WC_SEASON,
+  });
+}
+
 /** Account/quota status — useful for the dashboard or debugging. */
 export async function fetchAccountStatus(): Promise<{
   account: { firstname: string; lastname: string; email: string };

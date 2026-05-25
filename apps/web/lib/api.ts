@@ -306,6 +306,44 @@ export async function createPredictionMarket(
   return { ok: true, market: json.market };
 }
 
+/* ---- Stats (standings + top scorers) ---- */
+
+export interface StandingsTeam {
+  rank: number;
+  team: { id: number; name: string; logo: string };
+  points: number;
+  goalsDiff: number;
+  group: string;
+  form: string | null;
+  all: { played: number; win: number; draw: number; lose: number; goals: { for: number; against: number } };
+}
+
+export async function fetchStandings(): Promise<StandingsTeam[][]> {
+  const res = await fetch(`${API_URL}/stats/standings`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load standings");
+  return json.groups as StandingsTeam[][];
+}
+
+export interface TopScorerRow {
+  id: number;
+  name: string;
+  photo: string;
+  nationality: string;
+  team: { id: number; name: string; logo: string } | null;
+  goals: number;
+  assists: number;
+  appearances: number;
+  minutes: number;
+}
+
+export async function fetchTopScorers(): Promise<TopScorerRow[]> {
+  const res = await fetch(`${API_URL}/stats/top-scorers`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load top scorers");
+  return json.players as TopScorerRow[];
+}
+
 export async function listPredictionMarkets(): Promise<PredictionMarketView[]> {
   const res = await fetch(`${API_URL}/prediction-markets`);
   const json = await res.json();

@@ -1124,6 +1124,56 @@ textarea.strategy-input::placeholder { color: var(--text-3); }
   margin-top: 2px;
 }
 
+/* ---- Standings table ---- */
+.standings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.standings-group {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.standings-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 10px;
+}
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.standings-table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.standings-table td {
+  padding: 6px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.standings-table tbody tr:last-child td { border-bottom: none; }
+.standings-row-qualifier {
+  background: rgba(74, 222, 128, 0.05);
+}
+.standings-row-qualifier .lb-num { color: var(--success); }
+.standings-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
 /* ---- Specials list ---- */
 .specials-list { display: flex; flex-direction: column; gap: 6px; }
 .specials-row {
