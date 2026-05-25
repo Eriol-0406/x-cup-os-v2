@@ -63,10 +63,23 @@ button {
   top: 0;
   z-index: 10;
 }
+/* Header spans the FULL viewport — logo flush left, wallet flush right.
+   It bypasses the .container max-width by using its own full-width flex. */
+.header > .container {
+  max-width: 100%;
+  padding: 0 24px;
+}
 .header-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 24px;
+}
+.header-inner > .logo {
+  margin-right: auto;
+}
+.header-inner > .nav {
+  margin-left: auto;
 }
 .logo {
   display: flex;
