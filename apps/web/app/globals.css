@@ -353,6 +353,71 @@ textarea.strategy-input::placeholder { color: var(--text-3); }
   border-top: 1px solid var(--border);
 }
 
+/* ---- Leaderboard table ---- */
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.leaderboard-table th {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.leaderboard-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  vertical-align: middle;
+}
+.leaderboard-table tbody tr:last-child td { border-bottom: none; }
+.leaderboard-table tbody tr:hover td { background: var(--bg-2); }
+
+.lb-rank {
+  text-align: center;
+  font-weight: 700;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.lb-medal { font-size: 18px; line-height: 1; }
+.lb-medal-1 { filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.5)); }
+.lb-text {
+  color: var(--text-1);
+  font-size: 12px;
+  line-height: 1.4;
+  max-width: 380px;
+}
+.lb-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+}
+.lb-you-tag {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--accent-dim);
+  color: var(--text-1);
+  letter-spacing: 0.06em;
+}
+.lb-copy-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+  background: var(--bg-0);
+}
+.lb-copy-btn:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
 /* ---- Activity table ---- */
 .fires-table {
   width: 100%;

@@ -146,6 +146,93 @@ strategiesRouter.get("/:id/fires", async (req, res) => {
 });
 
 /**
+ * GET /strategies/leaderboard?limit=20 — top strategies ranked by
+ * currentPnlUsdc DESC (then fireCount DESC as tiebreak). Returns anonymized
+ * owner addresses (0x1234…ab12 format). Powers the public leaderboard
+ * section in the UI — Pillar 3 social proof.
+ */
+strategiesRouter.get("/leaderboard", async (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit ?? 20), 1), 50);
+  const strategies = await prisma.strategy.findMany({
+    where: { status: { in: ["active", "exhausted"] } },
+    include: { user: { select: { mainWallet: true } }, _count: { select: { fires: true, claims: true } } },
+    orderBy: [{ currentPnlUsdc: "desc" }, { fireCount: "desc" }, { createdAt: "asc" }],
+    take: limit,
+  });
+  return res.json({
+    ok: true,
+    count: strategies.length,
+    leaderboard: strategies.map((s, idx) => ({
+      rank: idx + 1,
+      strategyId: s.id,
+      ownerShort: shortAddr(s.user.mainWallet),
+      ownerFull: s.user.mainWallet,
+      englishText: s.englishText,
+      status: s.status,
+      fireCount: s.fireCount,
+      claimCount: s._count.claims,
+      currentPnlUsdc: s.currentPnlUsdc,
+      maxLossUsdc: s.maxLossUsdc,
+      createdAt: s.createdAt.toISOString(),
+    })),
+  });
+});
+
+const CopyRequest = z.object({
+  walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+});
+
+/**
+ * POST /strategies/:id/copy — clone a strategy's parsedJson + englishText into
+ * the requesting user's account. The clone starts as `draft` (must be
+ * activated separately) and re-resolves its own targetMarketIds (same teams,
+ * same on-chain markets, but fresh row owned by the new user).
+ */
+strategiesRouter.post("/:id/copy", async (req, res) => {
+  const body = CopyRequest.safeParse(req.body);
+  if (!body.success) {
+    return res.status(400).json({ ok: false, error: "invalid request", issues: body.error.flatten() });
+  }
+  const sourceId = String(req.params.id ?? "");
+  try {
+    const source = await prisma.strategy.findUnique({ where: { id: sourceId } });
+    if (!source) return res.status(404).json({ ok: false, error: "source strategy not found" });
+
+    const checksum = ethers.getAddress(body.data.walletAddress);
+    const user = await ensureUserWithAgent(checksum);
+    const dbUser = await prisma.user.findUnique({ where: { mainWallet: user.mainWallet } });
+    if (!dbUser) return res.status(500).json({ ok: false, error: "user upsert failed" });
+
+    const parsed = JSON.parse(source.parsedJson);
+    const targetMarketIds = await resolveStrategyTargets(parsed);
+
+    const clone = await prisma.strategy.create({
+      data: {
+        userId: dbUser.id,
+        englishText: source.englishText,
+        parsedJson: source.parsedJson,
+        status: "draft",
+        maxLossUsdc: source.maxLossUsdc,
+        targetMarketIds: JSON.stringify(targetMarketIds),
+      },
+    });
+    return res.json({
+      ok: true,
+      sourceId,
+      clone: serializeStrategy(clone),
+    });
+  } catch (err: any) {
+    console.error("[POST /strategies/:id/copy]", err);
+    return res.status(500).json({ ok: false, error: err?.message ?? "internal error" });
+  }
+});
+
+function shortAddr(a: string): string {
+  if (!a || a.length < 10) return a;
+  return `${a.slice(0, 6)}…${a.slice(-4)}`;
+}
+
+/**
  * GET /strategies/fires?wallet=0x... — list every fire across every strategy
  * owned by a given wallet. Convenience endpoint for the activity dashboard.
  */

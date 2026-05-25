@@ -219,6 +219,45 @@ export async function listTournamentMarkets(): Promise<TournamentMarketRecord[]>
   return json.markets as TournamentMarketRecord[];
 }
 
+/* ---- Leaderboard + copy strategy ---- */
+
+export interface LeaderboardEntry {
+  rank: number;
+  strategyId: string;
+  ownerShort: string;
+  ownerFull: string;
+  englishText: string;
+  status: "active" | "exhausted" | "paused" | "expired";
+  fireCount: number;
+  claimCount: number;
+  currentPnlUsdc: number;
+  maxLossUsdc: number | null;
+  createdAt: string;
+}
+
+export async function listLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
+  const res = await fetch(`${API_URL}/strategies/leaderboard?limit=${limit}`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load leaderboard");
+  return json.leaderboard as LeaderboardEntry[];
+}
+
+export async function copyStrategy(
+  sourceId: string,
+  walletAddress: string,
+): Promise<{ ok: boolean; cloneId?: string; error?: string }> {
+  const res = await fetch(`${API_URL}/strategies/${sourceId}/copy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ walletAddress }),
+  });
+  const json = await res.json();
+  if (!json.ok) return { ok: false, error: json.error ?? "Copy failed" };
+  // Auto-activate the clone so it's immediately live.
+  await fetch(`${API_URL}/strategies/${json.clone.id}/activate`, { method: "POST" });
+  return { ok: true, cloneId: json.clone.id };
+}
+
 export function statusLabel(s: FixtureStatus): string {
   const map: Record<string, string> = {
     NS: "Upcoming",

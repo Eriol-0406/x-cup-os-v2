@@ -89,9 +89,11 @@ Switching to live WC 2026 once API-Football plan is upgraded = change `WC_SEASON
   - 📄 Wrote `DEMO.md` with exact narration, UI actions, expected outcomes, on-chain proof links, and backup recovery steps
   - · _commit on next push_
 
+### Leaderboard + copy-strategy (DONE)
+- [x] **Leaderboard + copy-strategy** — `/strategies/leaderboard` ranks strategies by `currentPnlUsdc` DESC (fireCount as tiebreak), anonymizes owners with `0x1234…ab12` short addresses. `POST /strategies/:id/copy` clones a strategy's `parsedJson` + `englishText` into another user's account, re-resolves `targetMarketIds`, auto-activates. UI table with rank medals, owner, strategy text, fires, PnL, status pill, and Copy → button. Highlights "YOU" tag on your own rows. · _commit on next push_
+
 ### Still to do
-- [ ] **Leaderboard + copy-strategy** — top public strategies ranked by PnL, "copy this agent" clones rules into current user's account · _spec-marked scope-cuttable: first feature to drop if Day 7 checkpoint is at risk_
-- [ ] **Demo video + submission package** — pre-recorded (per spec Risk 5: no live demos), follow `DEMO.md` script, Twitter thread with on-chain proof, submit 24h before deadline. _Recording requires you behind the camera — script is ready._
+- [ ] **Demo video + submission package** — pre-recorded (per spec Risk 5: no live demos), follow `DEMO.md` script, Twitter thread with on-chain proof, submit 24h before deadline (2026-05-28 23:59 UTC). _Recording requires you behind the camera — script is ready._
 
 ---
 

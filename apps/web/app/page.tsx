@@ -4,6 +4,7 @@ import { MatchList } from "@/components/MatchList";
 import { ActivityDashboard } from "@/components/ActivityDashboard";
 import { AgentPanel } from "@/components/AgentPanel";
 import { TournamentMarketGrid } from "@/components/TournamentMarketGrid";
+import { Leaderboard } from "@/components/Leaderboard";
 
 export default function HomePage() {
   return (
@@ -28,6 +29,7 @@ export default function HomePage() {
         <TournamentMarketGrid />
         <MatchList />
         <ActivityDashboard />
+        <Leaderboard />
       </main>
 
       <footer className="footer">
