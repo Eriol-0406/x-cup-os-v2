@@ -30,7 +30,7 @@ Rules:
 - Team names: MUST be the canonical name from the list below if any list is provided. Map common aliases / nicknames to their canonical name. If the user mentions a team not in the list, use the closest match (single best guess).
 - NEVER use generic placeholders like "opponent", "the other team", "anyone", or "team X". Always emit a specific canonical team name from the list.
 - If the user phrases the trigger as "if team X loses" (or any phrasing where team X is on the losing side), you do NOT know the opposing team, so emit a match_winner condition with team = team X anyway. The user's action.outcome (YES/NO) determines what to bet — they understand their own logic.
-- Player names: keep as written (e.g. "Mbappe", "Messi").
+- Player names: keep as written (e.g. "Mbappe", "Messi"). For triggers like "If Mbappe scores first" or "If Messi scores", use the player_scores condition kind — the system will route the bet to the player-prop (first-scorer) market when one exists.
 - marketRef: a short snake_case slug describing the market (e.g. "france_reaches_final", "argentina_wins_qf").
 - outcome must be either YES or NO — coerce other phrasings.
 - stakeUsdc is in USDC (whole or fractional). Refuse if the user gives no stake.

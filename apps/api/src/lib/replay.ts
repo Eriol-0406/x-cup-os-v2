@@ -1,6 +1,6 @@
 import { prisma } from "../db.js";
 import { extractScorers, fetchFixture, fixtureToOutcomeIdx, type ApiFixtureRaw } from "./apiFootball.js";
-import { processMatchEvent, type FireResult } from "./firing.js";
+import { processMatchEvent, processPlayerPropEvent, type FireResult } from "./firing.js";
 import { settleAndClaim, type SettleResult } from "./oracle.js";
 import { settleFirstScorerMarket } from "./playerProps.js";
 
@@ -31,6 +31,8 @@ export interface ReplayResult {
   fires: FireResult[];
   settle: SettleResult;
   propSettle?: { ok: boolean; reason?: string; txHash?: string; winningOutcome?: number; winningPlayer?: string };
+  propFires?: FireResult[];
+  propClaims?: SettleResult | null;
 }
 
 export async function replayFixture(fixtureId: number): Promise<ReplayResult> {
@@ -82,12 +84,45 @@ export async function replayFixture(fixtureId: number): Promise<ReplayResult> {
   // Phase B — fire any strategy whose trigger matches this outcome.
   const fires = await processMatchEvent(matchEvent);
 
+  // Phase B' — fire any strategy targeting the player-prop market for this
+  // fixture (e.g. "If Messi scores"). Lookup the PPM by fixtureId first.
+  const propFires: FireResult[] = [];
+  if (matchEvent.scorers.length > 0) {
+    const { prisma } = await import("../db.js");
+    const ppm = await prisma.playerPropMarket.findUnique({
+      where: { fixtureId_type: { fixtureId, type: "first_scorer" } },
+    });
+    if (ppm) {
+      const fired = await processPlayerPropEvent({
+        marketId: ppm.marketId,
+        firstScorer: matchEvent.scorers[0]!,
+        scorers: matchEvent.scorers,
+        homeTeam: matchEvent.homeTeam,
+        awayTeam: matchEvent.awayTeam,
+      });
+      propFires.push(...fired);
+    }
+  }
+
   // Phase C + D — settle the market, auto-claim for winners.
   const settle = await settleAndClaim(matchEvent.marketId, matchEvent.winningOutcomeIdx);
 
   // Phase E — settle any player-prop markets on this fixture too (first-scorer
   // markets are settled with the actual first goal scorer from raw.events).
   const propSettle = await settleFirstScorerMarket(fixtureId, raw);
+
+  // Phase F — auto-claim player-prop winners. Run settleAndClaim on the
+  // player-prop market id so winners get their payout in the same flow.
+  let propClaims: any = null;
+  if (propSettle.ok && propSettle.winningOutcome !== undefined) {
+    const { prisma } = await import("../db.js");
+    const ppm = await prisma.playerPropMarket.findUnique({
+      where: { fixtureId_type: { fixtureId, type: "first_scorer" } },
+    });
+    if (ppm) {
+      propClaims = await settleAndClaim(ppm.marketId, propSettle.winningOutcome);
+    }
+  }
 
   return {
     fixture: {
@@ -106,5 +141,7 @@ export async function replayFixture(fixtureId: number): Promise<ReplayResult> {
     fires,
     settle,
     propSettle,
+    propFires,
+    propClaims,
   };
 }

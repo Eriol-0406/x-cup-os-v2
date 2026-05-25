@@ -20,6 +20,7 @@ export interface FireResult {
 export async function fireStrategy(
   strategyId: string,
   ev: MatchEvent,
+  outcomeIdxOverride?: number,
 ): Promise<FireResult> {
   const strategy = await prisma.strategy.findUnique({
     where: { id: strategyId },
@@ -29,6 +30,7 @@ export async function fireStrategy(
     throw new Error(`Strategy ${strategyId} not found`);
   }
   const parsed = JSON.parse(strategy.parsedJson) as ParsedStrategy;
+  const effectiveOutcomeIdx = outcomeIdxOverride ?? actionOutcomeIdx(parsed);
 
   // Pre-flight checks (re-validate at fire time per spec section 5, phase B step 4)
   const checks = await preflightChecks(strategy, parsed, ev);
@@ -37,7 +39,7 @@ export async function fireStrategy(
       data: {
         strategyId,
         marketId: ev.marketId,
-        outcomeIdx: actionOutcomeIdx(parsed),
+        outcomeIdx: effectiveOutcomeIdx,
         stakeUsdc: parsed.action.stakeUsdc,
         status: "failed",
         failureReason: checks.reason,
@@ -60,7 +62,7 @@ export async function fireStrategy(
     data: {
       strategyId,
       marketId: ev.marketId,
-      outcomeIdx: actionOutcomeIdx(parsed),
+      outcomeIdx: effectiveOutcomeIdx,
       stakeUsdc: parsed.action.stakeUsdc,
       status: "pending",
       matchEventJson: JSON.stringify(ev),
@@ -81,13 +83,13 @@ export async function fireStrategy(
 
     // Pre-flight static call to surface revert reasons cleanly.
     try {
-      await market.stake.staticCall(ev.marketId, actionOutcomeIdx(parsed), stakeAmount);
+      await market.stake.staticCall(ev.marketId, effectiveOutcomeIdx, stakeAmount);
     } catch (simErr: any) {
       throw new Error(`stake simulation reverted: ${simErr?.shortMessage ?? simErr?.message ?? simErr}`);
     }
 
     // Stake.
-    const tx = await market.stake(ev.marketId, actionOutcomeIdx(parsed), stakeAmount);
+    const tx = await market.stake(ev.marketId, effectiveOutcomeIdx, stakeAmount);
     const receipt = await tx.wait();
 
     await prisma.strategyFire.update({
@@ -157,6 +159,86 @@ async function preflightChecks(
 
   // (We don't check OKB here — the tx will revert naturally if gas is insufficient.)
   return { ok: true };
+}
+
+/**
+ * Player-prop event — fires strategies on a per-fixture player-prop market
+ * (e.g. first-scorer). Different shape from MatchEvent because the outcomeIdx
+ * for the stake comes from matching the strategy's named player against the
+ * player-prop market's outcomes, not from a YES/NO action.
+ *
+ * Called from replay.ts after the match-winner event has been processed.
+ */
+export interface PlayerPropEvent {
+  marketId: number;
+  firstScorer: string;
+  scorers: string[];
+  homeTeam: string;
+  awayTeam: string;
+}
+
+export async function processPlayerPropEvent(ev: PlayerPropEvent): Promise<FireResult[]> {
+  const ppm = await prisma.playerPropMarket.findUnique({ where: { marketId: ev.marketId } });
+  if (!ppm) return [];
+  const outcomes = JSON.parse(ppm.outcomesJson) as Array<{ idx: number; label: string; playerName?: string }>;
+
+  const actives = await prisma.strategy.findMany({
+    where: { status: "active" },
+    include: { user: true },
+  });
+
+  const fires: FireResult[] = [];
+  for (const s of actives) {
+    let targets: number[] = [];
+    try { targets = JSON.parse(s.targetMarketIds); } catch { /* empty */ }
+    if (targets.length > 0 && !targets.includes(ev.marketId)) continue;
+
+    const parsed = JSON.parse(s.parsedJson) as ParsedStrategy;
+    const playerCond = parsed.trigger.conditions.find((c) => c.kind === "player_scores");
+    if (!playerCond || playerCond.kind !== "player_scores") continue;
+
+    // Match the strategy's player against the actual first scorer first — if
+    // they don't match, the trigger fails so don't stake.
+    const targetPlayer = playerCond.player.toLowerCase().trim();
+    const actualFirst = ev.firstScorer.toLowerCase().trim();
+    if (!actualFirst.includes(targetPlayer) && !targetPlayer.includes(actualFirst)) continue;
+
+    // Find which outcome idx in the player-prop market corresponds to the
+    // strategy's named player. If they staked on Messi and Messi scored
+    // first, the staking outcome IS Messi (which is also the winning outcome).
+    const playerOutcomeIdx = outcomes.findIndex(
+      (o) =>
+        o.playerName &&
+        (o.playerName.toLowerCase().includes(targetPlayer) ||
+          targetPlayer.includes(o.playerName.toLowerCase())),
+    );
+    if (playerOutcomeIdx === -1) {
+      // Player isn't an outcome in this market — fall back to "Other" bucket
+      // (last outcome by convention)
+      continue;
+    }
+
+    // Build a MatchEvent-shaped object for fireStrategy's existing preflight
+    // (it only reads market state from chain, not these fields). winningOutcomeIdx
+    // here is purely informational for the StrategyFire row.
+    const ev2 = {
+      marketId: ev.marketId,
+      winningOutcomeIdx: playerOutcomeIdx,
+      homeTeam: ev.homeTeam,
+      awayTeam: ev.awayTeam,
+      homeScore: 0,
+      awayScore: 0,
+      scorers: ev.scorers,
+    };
+
+    try {
+      const r = await fireStrategy(s.id, ev2, playerOutcomeIdx);
+      fires.push(r);
+    } catch (err: any) {
+      fires.push({ fireId: "(none)", ok: false, reason: err?.message ?? String(err) });
+    }
+  }
+  return fires;
 }
 
 /**

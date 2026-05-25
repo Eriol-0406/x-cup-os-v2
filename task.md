@@ -92,8 +92,12 @@ Switching to live WC 2026 once API-Football plan is upgraded = change `WC_SEASON
 ### Leaderboard + copy-strategy (DONE)
 - [x] **Leaderboard + copy-strategy** — `/strategies/leaderboard` ranks strategies by `currentPnlUsdc` DESC (fireCount as tiebreak), anonymizes owners with `0x1234…ab12` short addresses. `POST /strategies/:id/copy` clones a strategy's `parsedJson` + `englishText` into another user's account, re-resolves `targetMarketIds`, auto-activates. UI table with rank medals, owner, strategy text, fires, PnL, status pill, and Copy → button. Highlights "YOU" tag on your own rows. · _commit on next push_
 
+### First-scorer player-prop markets + AI agent integration (DONE)
+- [x] **Per-fixture first-scorer markets** — 16 markets created (one per WC2022 knockout). Outcomes are real player names from API-Football goal events (Messi, Mbappé, Giroud, etc.). UI inline panel under each finished fixture card with player rows, implied odds %, pool, "Bet" buttons. Auto-settles on replay with the actual first scorer. · _commit on next push_
+- [x] **AI agent fires on player-prop markets** — strategies like "If Messi scores" resolve to all player-prop markets where Messi is an outcome. New `processPlayerPropEvent()` in firing.ts looks up the player's outcome idx in the market and stakes on it. Replay flow fires both match-winner AND player-prop events, then settles+claims both. Verified: deployed "If Messi scores, stake 15 USDC YES" → replay Argentina 1-2 Saudi Arabia → agent autonomously staked 15 USDC on the Messi outcome of player-prop market 101 → settled → claimed 15 USDC. · _commit on next push_
+
 ### Still to do
-- [ ] **Demo video + submission package** — pre-recorded (per spec Risk 5: no live demos), follow `DEMO.md` script, Twitter thread with on-chain proof, submit 24h before deadline (2026-05-28 23:59 UTC). _Recording requires you behind the camera — script is ready._
+- [ ] **Demo video + submission package** — pre-recorded (per spec Risk 5: no live demos), follow `DEMO.md` script, Twitter thread with on-chain proof, submit 24h before deadline (2026-05-28 23:59 UTC). _Recording requires you behind the camera — DEMO.md needs an update to include the new player-prop beat._
 
 ---
 

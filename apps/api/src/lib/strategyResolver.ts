@@ -24,32 +24,54 @@ import { prisma } from "../db.js";
  */
 export async function resolveStrategyTargets(parsed: ParsedStrategy): Promise<number[]> {
   const teamMentions = new Set<string>();
+  const playerMentions = new Set<string>();
   for (const c of parsed.trigger.conditions) {
     if (c.kind === "match_winner") teamMentions.add(c.team);
     if (c.kind === "score_threshold") teamMentions.add(c.team);
-    // player_scores → no team to extract; needs a sibling condition
+    if (c.kind === "player_scores") playerMentions.add(c.player);
   }
-  if (teamMentions.size === 0) return [];
-
-  // Fetch every Fixture with at least one mapped market. We do the team
-  // matching in JS so we can do case-insensitive contains both directions
-  // ("Argentina" matches "Argentina"; "FRA" matches "France" via the
-  // contains-fallback).
-  const fixturesWithMarket = await prisma.fixture.findMany({
-    where: { market: { isNot: null } },
-    include: { market: true },
-  });
+  if (teamMentions.size === 0 && playerMentions.size === 0) return [];
 
   const matched = new Set<number>();
-  for (const f of fixturesWithMarket) {
-    if (!f.market) continue;
-    const home = f.homeTeamName.toLowerCase();
-    const away = f.awayTeamName.toLowerCase();
-    for (const team of teamMentions) {
-      const t = team.toLowerCase();
-      if (home.includes(t) || t.includes(home) || away.includes(t) || t.includes(away)) {
-        matched.add(f.market.marketId);
-        break;
+
+  // 1. Match-winner markets keyed by team mention
+  if (teamMentions.size > 0) {
+    const fixturesWithMarket = await prisma.fixture.findMany({
+      where: { market: { isNot: null } },
+      include: { market: true },
+    });
+    for (const f of fixturesWithMarket) {
+      if (!f.market) continue;
+      const home = f.homeTeamName.toLowerCase();
+      const away = f.awayTeamName.toLowerCase();
+      for (const team of teamMentions) {
+        const t = team.toLowerCase();
+        if (home.includes(t) || t.includes(home) || away.includes(t) || t.includes(away)) {
+          matched.add(f.market.marketId);
+          break;
+        }
+      }
+    }
+  }
+
+  // 2. Player-prop markets keyed by player mention — if a strategy says
+  // "if Messi scores", we also include any first-scorer market where Messi
+  // is one of the named outcomes.
+  if (playerMentions.size > 0) {
+    const props = await prisma.playerPropMarket.findMany();
+    for (const p of props) {
+      const outcomes = JSON.parse(p.outcomesJson) as Array<{ playerName?: string }>;
+      for (const player of playerMentions) {
+        const pl = player.toLowerCase();
+        const hit = outcomes.some(
+          (o) =>
+            o.playerName &&
+            (o.playerName.toLowerCase().includes(pl) || pl.includes(o.playerName.toLowerCase())),
+        );
+        if (hit) {
+          matched.add(p.marketId);
+          break;
+        }
       }
     }
   }
