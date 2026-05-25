@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Header } from "@/components/Header";
 import { StrategyEditor } from "@/components/StrategyEditor";
 import { ActivityDashboard } from "@/components/ActivityDashboard";
@@ -20,36 +21,36 @@ export default function HomePage() {
             bets on-chain when your conditions hit. You sleep, your agent trades.
           </p>
           <div className="hero-nav-row">
-            <a href="/match" className="hero-nav-card">
+            <Link href="/match" className="hero-nav-card">
               <span className="hero-nav-emoji">⚽</span>
               <span className="hero-nav-title">Match</span>
               <span className="hero-nav-sub">1x2 per-fixture · 64 markets</span>
-            </a>
-            <a href="/outrights" className="hero-nav-card">
+            </Link>
+            <Link href="/outrights" className="hero-nav-card">
               <span className="hero-nav-emoji">🏆</span>
               <span className="hero-nav-title">Outrights</span>
               <span className="hero-nav-sub">Team-token · 32 markets</span>
-            </a>
-            <a href="/predictions" className="hero-nav-card">
+            </Link>
+            <Link href="/predictions" className="hero-nav-card">
               <span className="hero-nav-emoji">🔮</span>
               <span className="hero-nav-title">Predictions</span>
               <span className="hero-nav-sub">Yes/No opinion · 5 markets</span>
-            </a>
-            <a href="/specials" className="hero-nav-card">
+            </Link>
+            <Link href="/specials" className="hero-nav-card">
               <span className="hero-nav-emoji">🎯</span>
               <span className="hero-nav-title">Specials</span>
               <span className="hero-nav-sub">First scorer · 16 markets</span>
-            </a>
-            <a href="/bracket" className="hero-nav-card">
+            </Link>
+            <Link href="/bracket" className="hero-nav-card">
               <span className="hero-nav-emoji">🏟️</span>
               <span className="hero-nav-title">Bracket</span>
               <span className="hero-nav-sub">Knockout tree</span>
-            </a>
-            <a href="/leaderboard" className="hero-nav-card">
+            </Link>
+            <Link href="/leaderboard" className="hero-nav-card">
               <span className="hero-nav-emoji">📊</span>
               <span className="hero-nav-title">Leaderboard</span>
               <span className="hero-nav-sub">Top strategies + copy</span>
-            </a>
+            </Link>
           </div>
         </section>
 
