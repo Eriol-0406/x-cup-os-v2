@@ -344,6 +344,33 @@ export async function fetchTopScorers(): Promise<TopScorerRow[]> {
   return json.players as TopScorerRow[];
 }
 
+/* ---- Head-to-head ---- */
+
+export interface H2HMatch {
+  id: number;
+  date: string;
+  status: string;
+  league: string;
+  season: number;
+  round: string;
+  venue: string | null;
+  home: { id: number; name: string; logo: string; goals: number | null };
+  away: { id: number; name: string; logo: string; goals: number | null };
+  penalty: { home: number; away: number } | null;
+}
+
+export interface H2HResult {
+  summary: { total: number; aWins: number; bWins: number; draws: number };
+  matches: H2HMatch[];
+}
+
+export async function fetchH2H(teamAId: number, teamBId: number): Promise<H2HResult> {
+  const res = await fetch(`${API_URL}/fixtures/h2h?a=${teamAId}&b=${teamBId}`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load H2H");
+  return { summary: json.summary, matches: json.matches };
+}
+
 export async function listPredictionMarkets(): Promise<PredictionMarketView[]> {
   const res = await fetch(`${API_URL}/prediction-markets`);
   const json = await res.json();

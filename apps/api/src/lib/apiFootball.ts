@@ -191,6 +191,17 @@ export async function fetchLiveFixtures(): Promise<ApiFixtureRaw[]> {
 /* Standings + top scorers (cached the same way as fixtures)                  */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Head-to-head history between two teams. Free-tier note: cannot pass `last=N`
+ * (paid only). We fetch ALL meetings and slice in the caller. For nations the
+ * total list is usually under 50 entries so this is fine.
+ */
+export async function fetchHeadToHead(team1Id: number, team2Id: number): Promise<ApiFixtureRaw[]> {
+  // API normalizes the pair regardless of order, so sort to maximize cache hits.
+  const [a, b] = team1Id < team2Id ? [team1Id, team2Id] : [team2Id, team1Id];
+  return get<ApiFixtureRaw[]>("/fixtures/headtohead", { h2h: `${a}-${b}` });
+}
+
 export interface ApiStandingsTeam {
   rank: number;
   team: { id: number; name: string; logo: string };
