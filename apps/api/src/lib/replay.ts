@@ -2,6 +2,7 @@ import { prisma } from "../db.js";
 import { extractScorers, fetchFixture, fixtureToOutcomeIdx, type ApiFixtureRaw } from "./apiFootball.js";
 import { processMatchEvent, type FireResult } from "./firing.js";
 import { settleAndClaim, type SettleResult } from "./oracle.js";
+import { settleFirstScorerMarket } from "./playerProps.js";
 
 /**
  * Replay a historical (finished) fixture: pull its real outcome, fire any
@@ -29,6 +30,7 @@ export interface ReplayResult {
   };
   fires: FireResult[];
   settle: SettleResult;
+  propSettle?: { ok: boolean; reason?: string; txHash?: string; winningOutcome?: number; winningPlayer?: string };
 }
 
 export async function replayFixture(fixtureId: number): Promise<ReplayResult> {
@@ -83,6 +85,10 @@ export async function replayFixture(fixtureId: number): Promise<ReplayResult> {
   // Phase C + D — settle the market, auto-claim for winners.
   const settle = await settleAndClaim(matchEvent.marketId, matchEvent.winningOutcomeIdx);
 
+  // Phase E — settle any player-prop markets on this fixture too (first-scorer
+  // markets are settled with the actual first goal scorer from raw.events).
+  const propSettle = await settleFirstScorerMarket(fixtureId, raw);
+
   return {
     fixture: {
       id: fixture.id,
@@ -99,5 +105,6 @@ export async function replayFixture(fixtureId: number): Promise<ReplayResult> {
     },
     fires,
     settle,
+    propSettle,
   };
 }

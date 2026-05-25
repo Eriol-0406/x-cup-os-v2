@@ -91,6 +91,7 @@ model Fixture {
   rawJson         String                     // full API response for any extra data we need later
   updatedAt       DateTime  @updatedAt
   market          FixtureMarket?
+  playerProps     PlayerPropMarket[]
 
   @@index([status])
   @@index([date])
@@ -106,6 +107,29 @@ model FixtureMarket {
   outcomeCount    Int                        // 2 (knockout) or 3 (group)
   createMarketTx  String
   createdAt       DateTime  @default(now())
+}
+
+/// Per-fixture prop markets beyond match-winner. v1: "first goal scorer".
+/// Outcomes are dynamic — built from the fixture's actual goal scorers
+/// (cap 7 distinct players + an "Other / no scorer" catch-all bucket).
+/// Settled by the replay flow with the actual first scorer.
+model PlayerPropMarket {
+  id              String    @id @default(cuid())
+  fixtureId       Int
+  fixture         Fixture   @relation(fields: [fixtureId], references: [id])
+  /// "first_scorer" for v1; future: "anytime_scorer", "over_under_goals", etc.
+  type            String
+  marketId        Int       @unique          // on-chain XCupMarket id
+  outcomeCount    Int
+  /// JSON: [{ idx, label, playerName?, teamName? }]
+  outcomesJson    String
+  settled         Boolean   @default(false)
+  winningOutcome  Int?
+  createMarketTx  String
+  createdAt       DateTime  @default(now())
+
+  @@unique([fixtureId, type])
+  @@index([type])
 }
 
 /// Pillar 1 — long-term "Team X wins the tournament" outcome shares.

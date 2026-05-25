@@ -242,6 +242,36 @@ export async function listLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
   return json.leaderboard as LeaderboardEntry[];
 }
 
+/* ---- Player-prop markets (first scorer, etc.) ---- */
+
+export interface PropOutcomeView {
+  idx: number;
+  label: string;
+  playerName?: string;
+  teamName?: string;
+  potUsdc: number;
+  impliedProb: number;
+  isWinner: boolean;
+}
+
+export interface PlayerPropMarketView {
+  id: string;
+  fixtureId: number;
+  type: string;
+  marketId: number;
+  settled: boolean;
+  winningOutcome: number | null;
+  totalPotUsdc: number;
+  outcomes: PropOutcomeView[];
+}
+
+export async function listPlayerPropsForFixture(fixtureId: number): Promise<PlayerPropMarketView[]> {
+  const res = await fetch(`${API_URL}/player-prop-markets/by-fixture/${fixtureId}`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load player props");
+  return (json.markets as PlayerPropMarketView[]) ?? [];
+}
+
 export async function copyStrategy(
   sourceId: string,
   walletAddress: string,

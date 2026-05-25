@@ -8,6 +8,7 @@ import { replayFixture } from "../lib/replay.js";
 import { backfillTargets } from "../lib/strategyResolver.js";
 import { fetchWCTeams, getCachedTeams } from "../lib/teams.js";
 import { createTournamentMarkets, settleTournament } from "../lib/tournamentSync.js";
+import { createFirstScorerMarkets } from "../lib/playerProps.js";
 
 export const adminRouter = Router();
 
@@ -225,5 +226,45 @@ adminRouter.post("/replay-fixture/:id", async (req, res) => {
   } catch (err: any) {
     console.error("[POST /admin/replay-fixture]", err);
     return res.status(400).json({ ok: false, error: err?.message ?? "internal error" });
+  }
+});
+
+const FirstScorerSchema = z.object({
+  fixtureIds: z.array(z.number().int().positive()).optional(),
+  limit: z.number().int().positive().max(30).optional(),
+});
+
+/**
+ * POST /admin/create-first-scorer-markets
+ *
+ * Builds per-fixture "Who scores first?" markets. For each eligible fixture
+ * (FT/AET/PEN status, not yet mapped), fetches its goal events from
+ * API-Football and creates an on-chain market with one outcome per distinct
+ * scorer (cap 7) plus "Other / no scorer".
+ *
+ * Body: { fixtureIds?: [int], limit?: int }
+ *   - fixtureIds: only create markets for these fixtures (recommended for
+ *     quota — e.g. just the knockout matches)
+ *   - limit: cap how many fixtures to process (default 30)
+ *
+ * Costs ~1 API request per fixture processed. Watch /admin/api-status budget.
+ */
+adminRouter.post("/create-first-scorer-markets", async (req, res) => {
+  const body = FirstScorerSchema.safeParse(req.body ?? {});
+  if (!body.success) {
+    return res.status(400).json({ ok: false, error: "invalid request", issues: body.error.flatten() });
+  }
+  try {
+    const result = await createFirstScorerMarkets(body.data);
+    return res.json({
+      ok: true,
+      created: result.created.length,
+      skipped: result.skipped,
+      failed: result.failed,
+      markets: result.created,
+    });
+  } catch (err: any) {
+    console.error("[POST /admin/create-first-scorer-markets]", err);
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
   }
 });

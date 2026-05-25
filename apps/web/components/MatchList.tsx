@@ -13,6 +13,7 @@ import {
   type ReplayResponse,
 } from "@/lib/api";
 import { MarketFilter } from "./MarketFilter";
+import { PlayerPropsPanel } from "./PlayerPropsPanel";
 
 const EXPLORER = "https://www.oklink.com/x-layer-testnet";
 
@@ -143,6 +144,8 @@ function FixtureCard({ f }: { f: FixtureRecord }) {
       : null;
 
   const [replay, setReplay] = useState<ReplayState>({ kind: "idle" });
+  const [propsOpen, setPropsOpen] = useState(false);
+  const [propsRefresh, setPropsRefresh] = useState(0);
 
   const onReplay = async () => {
     setReplay({ kind: "running" });
@@ -151,6 +154,7 @@ function FixtureCard({ f }: { f: FixtureRecord }) {
       if (result.ok) {
         setReplay({ kind: "done", result });
         window.dispatchEvent(new CustomEvent("xcup:replay-done", { detail: { fixtureId: f.id } }));
+        setPropsRefresh((n) => n + 1);
       } else {
         setReplay({ kind: "error", message: result.error ?? "Replay failed" });
       }
@@ -220,6 +224,15 @@ function FixtureCard({ f }: { f: FixtureRecord }) {
           {f.market ? ` · M#${f.market.marketId}` : " · pending"}
         </span>
       </div>
+
+      {done && (
+        <div className="prop-toggle-row">
+          <button className="btn prop-toggle-btn" onClick={() => setPropsOpen((v) => !v)}>
+            🎯 {propsOpen ? "Hide first-scorer odds" : "Show first-scorer odds"}
+          </button>
+        </div>
+      )}
+      {propsOpen && <PlayerPropsPanel fixtureId={f.id} refreshKey={propsRefresh} />}
 
       {done && f.market && (
         <div className="replay-row">
