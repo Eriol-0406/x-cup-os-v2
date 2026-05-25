@@ -9,6 +9,11 @@ import { backfillTargets } from "../lib/strategyResolver.js";
 import { fetchWCTeams, getCachedTeams } from "../lib/teams.js";
 import { createTournamentMarkets, settleTournament } from "../lib/tournamentSync.js";
 import { createFirstScorerMarkets } from "../lib/playerProps.js";
+import {
+  createPredictionMarket,
+  seedDefaultPredictions,
+  settlePredictionMarket,
+} from "../lib/predictionMarkets.js";
 
 export const adminRouter = Router();
 
@@ -265,6 +270,63 @@ adminRouter.post("/create-first-scorer-markets", async (req, res) => {
     });
   } catch (err: any) {
     console.error("[POST /admin/create-first-scorer-markets]", err);
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+const CreatePredictionSchema = z.object({
+  slug: z.string().regex(/^[a-z0-9-]+$/, "slug must be kebab-case alphanumeric"),
+  question: z.string().min(8).max(280),
+  category: z.enum(["Tournament", "Player", "Special"]).optional(),
+  isPrivate: z.boolean().optional(),
+  allowlist: z.array(z.string().regex(/^0x[a-fA-F0-9]{40}$/)).optional(),
+});
+
+/**
+ * POST /admin/create-prediction-market — create a single opinion-style binary
+ * market (YES/NO). Use `isPrivate: true` + allowlist for friend-only markets.
+ */
+adminRouter.post("/create-prediction-market", async (req, res) => {
+  const body = CreatePredictionSchema.safeParse(req.body ?? {});
+  if (!body.success) {
+    return res.status(400).json({ ok: false, error: "invalid request", issues: body.error.flatten() });
+  }
+  try {
+    const created = await createPredictionMarket(body.data);
+    return res.json({ ok: true, market: created });
+  } catch (err: any) {
+    console.error("[POST /admin/create-prediction-market]", err);
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+/** POST /admin/seed-predictions — create the 5 default WC 2022 prediction markets. Idempotent. */
+adminRouter.post("/seed-predictions", async (_req, res) => {
+  try {
+    const created = await seedDefaultPredictions();
+    return res.json({ ok: true, count: created.length, markets: created });
+  } catch (err: any) {
+    console.error("[POST /admin/seed-predictions]", err);
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+const SettlePredictionSchema = z.object({
+  slug: z.string(),
+  winningOutcome: z.number().int().min(0).max(1),
+});
+
+/** POST /admin/settle-prediction — resolve a prediction market YES (0) or NO (1). */
+adminRouter.post("/settle-prediction", async (req, res) => {
+  const body = SettlePredictionSchema.safeParse(req.body ?? {});
+  if (!body.success) {
+    return res.status(400).json({ ok: false, error: "invalid request", issues: body.error.flatten() });
+  }
+  try {
+    const result = await settlePredictionMarket(body.data.slug, body.data.winningOutcome);
+    return res.json(result);
+  } catch (err: any) {
+    console.error("[POST /admin/settle-prediction]", err);
     return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
   }
 });

@@ -7,6 +7,7 @@ import { adminRouter } from "./routes/admin.js";
 import { fixturesRouter } from "./routes/fixtures.js";
 import { tournamentMarketsRouter } from "./routes/tournamentMarkets.js";
 import { playerPropsRouter } from "./routes/playerProps.js";
+import { predictionMarketsRouter } from "./routes/predictionMarkets.js";
 import { warmupTeamCache } from "./lib/teams.js";
 
 const app = express();
@@ -24,6 +25,7 @@ app.use("/admin", adminRouter);
 app.use("/fixtures", fixturesRouter);
 app.use("/tournament-markets", tournamentMarketsRouter);
 app.use("/player-prop-markets", playerPropsRouter);
+app.use("/prediction-markets", predictionMarketsRouter);
 
 app.listen(env.PORT, () => {
   console.log(`✅ x-cup-os api listening on http://localhost:${env.PORT}`);

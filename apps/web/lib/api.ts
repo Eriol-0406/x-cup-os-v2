@@ -265,6 +265,73 @@ export interface PlayerPropMarketView {
   outcomes: PropOutcomeView[];
 }
 
+/* ---- Prediction markets (Y/N opinion) ---- */
+
+export interface PredictionMarketView {
+  id: string;
+  slug: string;
+  question: string;
+  category: "Tournament" | "Player" | "Special";
+  marketId: number;
+  settled: boolean;
+  winningOutcome: number | null;
+  isPrivate: boolean;
+  allowlist: string[];
+  yesPotUsdc: number;
+  noPotUsdc: number;
+  totalPotUsdc: number;
+  yesProb: number;
+  createMarketTx: string;
+  createdAt: string;
+}
+
+export interface CreatePredictionInput {
+  slug: string;
+  question: string;
+  category: "Tournament" | "Player" | "Special";
+  isPrivate: boolean;
+  allowlist: string[];
+}
+
+export async function createPredictionMarket(
+  input: CreatePredictionInput,
+): Promise<{ ok: boolean; market?: PredictionMarketView; error?: string }> {
+  const res = await fetch(`${API_URL}/admin/create-prediction-market`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const json = await res.json();
+  if (!json.ok) return { ok: false, error: json.error ?? "Create failed" };
+  return { ok: true, market: json.market };
+}
+
+export async function listPredictionMarkets(): Promise<PredictionMarketView[]> {
+  const res = await fetch(`${API_URL}/prediction-markets`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load prediction markets");
+  return (json.markets as PredictionMarketView[]) ?? [];
+}
+
+/* ---- Player-prop aggregate (across all fixtures) ---- */
+
+export async function listAllPlayerProps(): Promise<{
+  id: string;
+  fixtureId: number;
+  type: string;
+  marketId: number;
+  settled: boolean;
+  home: string;
+  away: string;
+  round: string;
+  outcomeCount: number;
+}[]> {
+  const res = await fetch(`${API_URL}/player-prop-markets`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load player props");
+  return json.markets ?? [];
+}
+
 export async function listPlayerPropsForFixture(fixtureId: number): Promise<PlayerPropMarketView[]> {
   const res = await fetch(`${API_URL}/player-prop-markets/by-fixture/${fixtureId}`);
   const json = await res.json();

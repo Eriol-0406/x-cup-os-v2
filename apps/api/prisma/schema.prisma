@@ -109,6 +109,30 @@ model FixtureMarket {
   createdAt       DateTime  @default(now())
 }
 
+/// Yes/No opinion markets — "Will an unbeaten champion emerge?", "Will the
+/// Golden Boot winner be European?", etc. Each is a binary XCupMarket with
+/// outcome 0 = YES, outcome 1 = NO. Settled manually by admin at tournament
+/// end (or when the question is resolved). Optional friend-only allowlist.
+model PredictionMarket {
+  id              String    @id @default(cuid())
+  slug            String    @unique         // url-safe id, e.g. "unbeaten-champion-2022"
+  question        String                     // human-readable
+  category        String    @default("Tournament") // "Tournament" | "Player" | "Special"
+  season          Int
+  marketId        Int       @unique          // on-chain XCupMarket id
+  createMarketTx  String
+  settled         Boolean   @default(false)
+  winningOutcome  Int?                       // 0 = YES, 1 = NO
+  /// Friend-only flag (Pillar 1 social-trust angle). Empty allowlist = public.
+  isPrivate       Boolean   @default(false)
+  allowlistJson   String    @default("[]")   // JSON array of EVM addresses
+  createdAt       DateTime  @default(now())
+
+  @@index([season])
+  @@index([settled])
+  @@index([category])
+}
+
 /// Per-fixture prop markets beyond match-winner. v1: "first goal scorer".
 /// Outcomes are dynamic — built from the fixture's actual goal scorers
 /// (cap 7 distinct players + an "Other / no scorer" catch-all bucket).

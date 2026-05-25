@@ -74,13 +74,25 @@ export function Header() {
           <span className="logo-sub">/ World Cup betting agents</span>
         </div>
         <nav className="nav">
-          <a className="nav-link" href="#editor">
+          <a className="nav-link" href="/">
             Deploy
           </a>
-          <a className="nav-link" href="#matches">
-            Matches
+          <a className="nav-link" href="/match">
+            Match
           </a>
-          <a className="nav-link" href="#leaderboard">
+          <a className="nav-link" href="/outrights">
+            Outrights
+          </a>
+          <a className="nav-link" href="/predictions">
+            Predictions
+          </a>
+          <a className="nav-link" href="/specials">
+            Specials
+          </a>
+          <a className="nav-link" href="/bracket">
+            Bracket
+          </a>
+          <a className="nav-link" href="/leaderboard">
             Leaderboard
           </a>
           {renderWalletButton()}

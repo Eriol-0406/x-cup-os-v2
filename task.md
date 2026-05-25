@@ -96,8 +96,14 @@ Switching to live WC 2026 once API-Football plan is upgraded = change `WC_SEASON
 - [x] **Per-fixture first-scorer markets** — 16 markets created (one per WC2022 knockout). Outcomes are real player names from API-Football goal events (Messi, Mbappé, Giroud, etc.). UI inline panel under each finished fixture card with player rows, implied odds %, pool, "Bet" buttons. Auto-settles on replay with the actual first scorer. · _commit on next push_
 - [x] **AI agent fires on player-prop markets** — strategies like "If Messi scores" resolve to all player-prop markets where Messi is an outcome. New `processPlayerPropEvent()` in firing.ts looks up the player's outcome idx in the market and stakes on it. Replay flow fires both match-winner AND player-prop events, then settles+claims both. Verified: deployed "If Messi scores, stake 15 USDC YES" → replay Argentina 1-2 Saudi Arabia → agent autonomously staked 15 USDC on the Messi outcome of player-prop market 101 → settled → claimed 15 USDC. · _commit on next push_
 
+### Pillar 2 expansion + multi-page restructure (DONE)
+- [x] **Predictions markets** — 5 binary Y/N opinion markets seeded ("Will an unbeaten champion emerge?", "Top scorer 5+ goals?", "Host nation reaches R16?", "European Golden Boot?", "Underdog in semis?"). On-chain markets 120-124. Backend `PredictionMarket` model, /admin/seed-predictions, /admin/create-prediction-market, /admin/settle-prediction. · _commit on next push_
+- [x] **Multi-page route restructure** — separate Next.js pages for /match, /outrights, /predictions, /specials, /bracket, /leaderboard. Header nav with all routes. Home reduced to hero + agent + editor + activity. Hero shows nav cards as visual section index. · _commit on next push_
+- [x] **Visual knockout bracket page** — `KnockoutBracket` component renders R16 → QF → SF → Final as 4-column layout, reads from existing fixture data on-chain, highlights winners (incl. penalty winners) in green. · _commit on next push_
+- [x] **Friend-only private market flag** — `PredictionMarket.isPrivate` + `allowlist` JSON. UI: `CreatePredictionForm` lets any user create a prediction market with optional 🔒 friend-only toggle + comma/newline-separated wallet address list. Private markets render with 🔒 badge; UI blocks bet button if wallet not allowlisted (on-chain market itself remains permissionless — v2 enforcement). · _commit on next push_
+
 ### Still to do
-- [ ] **Demo video + submission package** — pre-recorded (per spec Risk 5: no live demos), follow `DEMO.md` script, Twitter thread with on-chain proof, submit 24h before deadline (2026-05-28 23:59 UTC). _Recording requires you behind the camera — DEMO.md needs an update to include the new player-prop beat._
+- [ ] **Demo video + submission package** — pre-recorded (per spec Risk 5: no live demos), follow `DEMO.md` script (NEEDS UPDATE for the new multi-page + predictions + bracket flow), Twitter thread with on-chain proof, submit 24h before deadline (2026-05-28 23:59 UTC).
 
 ---
 
