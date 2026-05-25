@@ -1,5 +1,5 @@
 import { Header } from "@/components/Header";
-import { TournamentMarketGrid } from "@/components/TournamentMarketGrid";
+import { OutrightsHub } from "@/components/OutrightsHub";
 
 export default function OutrightsPage() {
   return (
@@ -12,14 +12,14 @@ export default function OutrightsPage() {
             Long-term outcome shares
           </div>
           <h1 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 8px", letterSpacing: "-0.03em" }}>
-            Outrights — Tournament Winners
+            Outrights
           </h1>
           <p style={{ color: "var(--text-2)", maxWidth: 700, margin: 0, fontSize: 15 }}>
-            32 binary markets, one per team. Bet YES that this nation lifts the cup, or NO that they don't. Settled at
-            tournament end. The "team token" you actually buy.
+            Tournament Winner · To Reach Final · Top Goalscorer · Per-Group Winners — long-term parimutuel markets
+            with on-chain settlement. The "team token" you actually buy.
           </p>
         </section>
-        <TournamentMarketGrid />
+        <OutrightsHub />
       </main>
     </div>
   );

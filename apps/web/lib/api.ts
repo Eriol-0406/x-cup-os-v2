@@ -404,6 +404,72 @@ export async function listPlayerPropsForFixture(fixtureId: number): Promise<Play
   return (json.markets as PlayerPropMarketView[]) ?? [];
 }
 
+/* ---- Teams cache (used for /match group filter) ---- */
+
+export interface TeamCacheRow {
+  id: number;
+  name: string;
+  code: string | null;
+  country: string | null;
+  logo: string;
+  season: number;
+  groupLetter: string | null;
+}
+
+export async function listCachedTeams(): Promise<TeamCacheRow[]> {
+  const res = await fetch(`${API_URL}/teams`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load teams");
+  return (json.teams as TeamCacheRow[]) ?? [];
+}
+
+/* ---- Tournament-Specials (Top Scorer, Group Winners, etc.) ---- */
+
+export interface SpecialOutcomeView {
+  idx: number;
+  label: string;
+  teamId?: number;
+  teamLogo?: string;
+  playerName?: string;
+  photo?: string;
+  potUsdc: number;
+  impliedProb: number;
+  isWinner: boolean;
+}
+
+export interface TournamentSpecialView {
+  id: string;
+  slug: string;
+  question: string;
+  type: string;
+  groupLetter: string | null;
+  marketId: number;
+  settled: boolean;
+  winningOutcome: number | null;
+  totalPotUsdc: number;
+  outcomes: SpecialOutcomeView[];
+  createMarketTx: string;
+}
+
+export async function listTournamentSpecials(filter?: { type?: string; group?: string }): Promise<TournamentSpecialView[]> {
+  const qs = new URLSearchParams();
+  if (filter?.type) qs.set("type", filter.type);
+  if (filter?.group) qs.set("group", filter.group);
+  const url = `${API_URL}/tournament-specials${qs.toString() ? `?${qs.toString()}` : ""}`;
+  const res = await fetch(url);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load specials");
+  return (json.markets as TournamentSpecialView[]) ?? [];
+}
+
+/** listTournamentMarkets with a type filter (winner | to_reach_final). */
+export async function listTournamentMarketsByType(type: "winner" | "to_reach_final"): Promise<TournamentMarketRecord[]> {
+  const res = await fetch(`${API_URL}/tournament-markets?type=${type}`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load tournament markets");
+  return json.markets as TournamentMarketRecord[];
+}
+
 export async function copyStrategy(
   sourceId: string,
   walletAddress: string,

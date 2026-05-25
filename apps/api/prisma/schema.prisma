@@ -70,6 +70,22 @@ model StrategyFire {
 /// matches). Updated by the sync service from /fixtures?league=X&season=Y.
 /// Source of truth for matchups, scores, status — the on-chain market is
 /// pure betting state.
+/// Cached API-Football team metadata so we can render group letters / logos
+/// without re-hitting the API on every page load.
+model Team {
+  id           Int      @id                   // API-Football team id
+  name         String
+  code         String?
+  country      String?
+  logo         String
+  season       Int
+  groupLetter  String?                        // "A".."L" — pulled from standings
+  cachedAt     DateTime @default(now())
+
+  @@index([season])
+  @@index([groupLetter])
+}
+
 model Fixture {
   id              Int       @id              // API-Football fixture id
   date            DateTime
@@ -166,17 +182,47 @@ model TournamentMarket {
   teamName        String
   teamLogo        String
   teamCode        String?                    // "ARG", "FRA", etc
+  /// "winner" (does team X win the cup?) | "to_reach_final" | "to_reach_sf" |
+  /// "to_reach_qf" | "to_reach_r16"
+  type            String    @default("winner")
   marketId        Int       @unique          // on-chain XCupMarket id
-  outcomeCount    Int       @default(2)      // always binary for tournament-winner
+  outcomeCount    Int       @default(2)      // always binary for per-team outrights
   createMarketTx  String
   settled         Boolean   @default(false)
-  /// Set after POST /admin/settle-tournament — 0 if this team won (YES), 1 if not (NO)
+  /// 0 = YES (team achieved this milestone), 1 = NO
   winningOutcome  Int?
   createdAt       DateTime  @default(now())
 
-  @@unique([season, teamId])
+  @@unique([season, teamId, type])
   @@index([season])
+  @@index([type])
   @@index([settled])
+}
+
+/// Tournament-wide multi-outcome outrights — "Top Goalscorer" (8 player
+/// candidates), "Group A Winner" (4 teams), "Best Young Player" etc.
+/// Settled manually by admin.
+model TournamentSpecial {
+  id              String    @id @default(cuid())
+  season          Int
+  slug            String    @unique          // "top-scorer-2022", "group-a-winner-2022"
+  question        String                     // human-readable
+  /// "top_scorer" | "group_winner" | "best_young_player" | "best_goalkeeper" |
+  /// "winning_continent" | "first_time_winner" | etc.
+  type            String
+  groupLetter     String?                    // for group_winner: "A".."L"
+  marketId        Int       @unique          // on-chain XCupMarket id
+  outcomeCount    Int
+  /// JSON: [{ idx, label, teamId?, teamLogo?, playerName? }]
+  outcomesJson    String
+  settled         Boolean   @default(false)
+  winningOutcome  Int?
+  createMarketTx  String
+  createdAt       DateTime  @default(now())
+
+  @@index([season])
+  @@index([type])
+  @@index([groupLetter])
 }
 
 /// One row per claim event (after market settlement). Auto-created by the

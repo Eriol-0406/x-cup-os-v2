@@ -15,10 +15,11 @@ export const tournamentMarketsRouter = Router();
  *   teamId, teamName, teamLogo, marketId, settled, winningOutcome
  *   yesPotUsdc, noPotUsdc, totalPotUsdc, impliedYesProb (0-1)
  */
-tournamentMarketsRouter.get("/", async (_req, res) => {
+tournamentMarketsRouter.get("/", async (req, res) => {
   try {
+    const typeFilter = String(req.query.type ?? "winner");
     const rows = await prisma.tournamentMarket.findMany({
-      where: { season: env.WC_SEASON },
+      where: { season: env.WC_SEASON, type: typeFilter },
       orderBy: { teamName: "asc" },
     });
     if (rows.length === 0) return res.json({ ok: true, markets: [] });

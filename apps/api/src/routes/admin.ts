@@ -9,6 +9,14 @@ import { backfillTargets } from "../lib/strategyResolver.js";
 import { fetchWCTeams, getCachedTeams } from "../lib/teams.js";
 import { createTournamentMarkets, settleTournament } from "../lib/tournamentSync.js";
 import { createFirstScorerMarkets } from "../lib/playerProps.js";
+import { cacheTeamsWithGroups } from "../lib/teamsCache.js";
+import {
+  createOverUnderMarkets,
+  createBTTSMarkets,
+  createToReachFinalMarkets,
+  createTopScorerMarket,
+  createGroupWinnerMarkets,
+} from "../lib/subsetMarkets.js";
 import {
   createPredictionMarket,
   seedDefaultPredictions,
@@ -327,6 +335,91 @@ adminRouter.post("/settle-prediction", async (req, res) => {
     return res.json(result);
   } catch (err: any) {
     console.error("[POST /admin/settle-prediction]", err);
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+/* ---------- Bookmaker UI restructure: extra market types ---------- */
+
+/** POST /admin/cache-teams — pull /teams + /standings, populate Team table with group letters. */
+adminRouter.post("/cache-teams", async (_req, res) => {
+  try {
+    const result = await cacheTeamsWithGroups();
+    return res.json({ ok: true, ...result });
+  } catch (err: any) {
+    return res.status(502).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+/** POST /admin/create-over-under-markets — 1 binary per fixture (Over/Under 2.5). */
+adminRouter.post("/create-over-under-markets", async (_req, res) => {
+  try {
+    const result = await createOverUnderMarkets();
+    return res.json({ ok: true, ...result, sample: result.created.slice(0, 3) });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+/** POST /admin/create-btts-markets — 1 binary per fixture (Both Teams To Score). */
+adminRouter.post("/create-btts-markets", async (_req, res) => {
+  try {
+    const result = await createBTTSMarkets();
+    return res.json({ ok: true, ...result, sample: result.created.slice(0, 3) });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+/** POST /admin/create-to-reach-final-markets — 1 binary per team. */
+adminRouter.post("/create-to-reach-final-markets", async (_req, res) => {
+  try {
+    const created = await createToReachFinalMarkets();
+    return res.json({ ok: true, created: created.length, sample: created.slice(0, 3) });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+/** POST /admin/create-top-scorer-market — 1 multi-outcome market (top 7 scorers + Other). */
+adminRouter.post("/create-top-scorer-market", async (_req, res) => {
+  try {
+    const result = await createTopScorerMarket();
+    return res.json({ ok: true, result });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+/** POST /admin/create-group-winner-markets — 1 multi-outcome per group. */
+adminRouter.post("/create-group-winner-markets", async (_req, res) => {
+  try {
+    const created = await createGroupWinnerMarkets();
+    return res.json({ ok: true, created: created.length, sample: created.slice(0, 3) });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+  }
+});
+
+/** POST /admin/seed-bookmaker-markets — does all of the above in sequence. */
+adminRouter.post("/seed-bookmaker-markets", async (_req, res) => {
+  try {
+    const teamsRes = await cacheTeamsWithGroups();
+    const ouRes = await createOverUnderMarkets();
+    const bttsRes = await createBTTSMarkets();
+    const finalRes = await createToReachFinalMarkets();
+    const tsRes = await createTopScorerMarket();
+    const gwRes = await createGroupWinnerMarkets();
+    return res.json({
+      ok: true,
+      teams: teamsRes,
+      overUnder: { created: ouRes.created.length, skipped: ouRes.skipped, failed: ouRes.failed },
+      btts: { created: bttsRes.created.length, skipped: bttsRes.skipped, failed: bttsRes.failed },
+      toReachFinal: { created: finalRes.length },
+      topScorer: tsRes,
+      groupWinners: { created: gwRes.length },
+    });
+  } catch (err: any) {
     return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
   }
 });

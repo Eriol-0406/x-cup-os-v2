@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   listFixtures,
+  listCachedTeams,
   replayFixture,
   isLiveStatus,
   isFinishedStatus,
@@ -26,13 +27,20 @@ type State =
 export function MatchList() {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [filter, setFilter] = useState<FixtureStatusFilter>("all");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [teamGroup, setTeamGroup] = useState<Record<number, string>>({});
 
   useEffect(() => {
     let alive = true;
     const load = async () => {
       try {
-        const fixtures = await listFixtures("all"); // fetch all once, filter client-side
+        const [fixtures, teams] = await Promise.all([listFixtures("all"), listCachedTeams()]);
         if (!alive) return;
+        const tg: Record<number, string> = {};
+        for (const t of teams) {
+          if (t.groupLetter) tg[t.id] = t.groupLetter;
+        }
+        setTeamGroup(tg);
         setState({ kind: "ready", fixtures, refreshedAt: Date.now() });
       } catch (err: any) {
         if (!alive) return;
@@ -46,6 +54,12 @@ export function MatchList() {
       clearInterval(t);
     };
   }, []);
+
+  const groupLetters = useMemo(() => {
+    const set = new Set<string>();
+    for (const g of Object.values(teamGroup)) set.add(g);
+    return ["all", ...Array.from(set).sort()];
+  }, [teamGroup]);
 
   // Counts for filter pills
   const counts = useMemo<Record<FixtureStatusFilter, number>>(() => {
@@ -64,17 +78,25 @@ export function MatchList() {
 
   const filtered = useMemo(() => {
     if (state.kind !== "ready") return [];
+    let pool = state.fixtures;
     switch (filter) {
       case "live":
-        return state.fixtures.filter((f) => isLiveStatus(f.status));
+        pool = pool.filter((f) => isLiveStatus(f.status));
+        break;
       case "upcoming":
-        return state.fixtures.filter((f) => !isLiveStatus(f.status) && !isFinishedStatus(f.status));
+        pool = pool.filter((f) => !isLiveStatus(f.status) && !isFinishedStatus(f.status));
+        break;
       case "finished":
-        return state.fixtures.filter((f) => isFinishedStatus(f.status));
-      default:
-        return state.fixtures;
+        pool = pool.filter((f) => isFinishedStatus(f.status));
+        break;
     }
-  }, [state, filter]);
+    if (groupFilter !== "all") {
+      pool = pool.filter(
+        (f) => teamGroup[f.home.id] === groupFilter || teamGroup[f.away.id] === groupFilter,
+      );
+    }
+    return pool;
+  }, [state, filter, groupFilter, teamGroup]);
 
   return (
     <section id="matches" style={{ marginBottom: 48 }}>
@@ -93,6 +115,23 @@ export function MatchList() {
       </div>
 
       {state.kind === "ready" && <MarketFilter current={filter} onChange={setFilter} counts={counts} />}
+
+      {state.kind === "ready" && groupLetters.length > 1 && (
+        <div className="group-filter-row">
+          <span className="group-filter-label">Group</span>
+          <div className="filter-pills" style={{ marginBottom: 0 }}>
+            {groupLetters.map((g) => (
+              <button
+                key={g}
+                className={`filter-pill${groupFilter === g ? " filter-pill-active" : ""}`}
+                onClick={() => setGroupFilter(g)}
+              >
+                <span>{g === "all" ? "All Groups" : `Group ${g}`}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {state.kind === "loading" && (
         <div className="loading-card" style={{ marginTop: 14 }}>
