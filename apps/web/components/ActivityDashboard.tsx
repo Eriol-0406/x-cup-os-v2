@@ -118,15 +118,33 @@ export function ActivityDashboard() {
 }
 
 function FireRow({ f }: { f: FireRecord }) {
-  const when = new Date(f.createdAt).toLocaleTimeString();
-  const outcomeLabel = f.outcomeIdx === 0 ? "YES" : "NO";
+  const dateObj = new Date(f.createdAt);
+  const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const timeStr = dateObj.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const outcomeLabel = f.outcomeIdx === 0 ? "YES" : f.outcomeIdx === 1 ? "NO" : `O#${f.outcomeIdx}`;
   const trigger = `${f.matchEvent.homeTeam} ${f.matchEvent.homeScore}–${f.matchEvent.awayScore} ${f.matchEvent.awayTeam}${
-    f.matchEvent.scorers.length ? ` · ${f.matchEvent.scorers.join(", ")}` : ""
+    f.matchEvent.scorers.length ? ` · ${f.matchEvent.scorers.slice(0, 3).join(", ")}` : ""
   }`;
   return (
     <tr>
-      <td className="td-mono">{when}</td>
-      <td>Market #{f.marketId}</td>
+      <td className="td-mono" style={{ whiteSpace: "nowrap" }}>
+        <div style={{ fontSize: 11, color: "var(--text-3)" }}>{dateStr}</div>
+        <div>{timeStr}</div>
+      </td>
+      <td>
+        {f.marketRef ? (
+          <>
+            <div style={{ fontWeight: 600, fontSize: 12 }}>{f.marketRef.label}</div>
+            <div style={{ fontSize: 10, color: "var(--text-3)" }}>
+              <span className="market-type-pill">{f.marketRef.type}</span>
+              {f.marketRef.secondary && <> · {f.marketRef.secondary}</>}
+              {" · "}M#{f.marketId}
+            </div>
+          </>
+        ) : (
+          <span>Market #{f.marketId}</span>
+        )}
+      </td>
       <td>
         <span className={`tag tag-stake`}>{f.stakeUsdc} USDC</span>{" "}
         <span className={f.outcomeIdx === 0 ? "tag tag-yes" : "tag tag-no"}>{outcomeLabel}</span>

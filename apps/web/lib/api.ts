@@ -127,6 +127,11 @@ export interface FireRecord {
     awayScore: number;
     scorers: string[];
   };
+  marketRef?: {
+    type: string;
+    label: string;
+    secondary?: string;
+  };
   createdAt: string;
 }
 

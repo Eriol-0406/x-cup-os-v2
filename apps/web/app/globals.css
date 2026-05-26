@@ -106,14 +106,47 @@ button {
   display: flex;
   gap: 6px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .nav-link {
   padding: 6px 12px;
   border-radius: 6px;
   color: var(--text-2);
   font-weight: 500;
+  white-space: nowrap;
 }
 .nav-link:hover { color: var(--text-1); background: var(--bg-2); text-decoration: none; }
+
+/* Header responsive — tighten at <1400px, drop optional links at <1100px,
+   stack everything below 700px. The wallet button + logo always stay. */
+@media (max-width: 1400px) {
+  .nav { gap: 2px; }
+  .nav-link { padding: 6px 8px; font-size: 13px; }
+  .logo-sub { display: none; }
+}
+@media (max-width: 1100px) {
+  .nav-link[href="/standings"],
+  .nav-link[href="/top-scorers"] {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .header > .container { padding: 0 14px; }
+  .nav-link[href="/specials"],
+  .nav-link[href="/bracket"] {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .header-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .header-inner > .logo { margin-right: 0; justify-content: center; }
+  .header-inner > .nav { margin-left: 0; justify-content: center; }
+}
 .btn {
   border: 1px solid var(--border);
   background: var(--bg-2);
@@ -332,6 +365,18 @@ textarea.strategy-input::placeholder { color: var(--text-3); }
 .tag-yes { background: rgba(74, 222, 128, 0.15); color: var(--success); }
 .tag-no  { background: rgba(248, 113, 113, 0.15); color: var(--error); }
 .tag-stake { background: var(--accent-dim); color: #b4c9ff; }
+.market-type-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-2);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 4px;
+}
 
 .error-card {
   background: rgba(248, 113, 113, 0.08);

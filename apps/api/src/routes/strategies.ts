@@ -250,7 +250,76 @@ strategiesRouter.get("/fires/by-wallet", async (req, res) => {
     orderBy: { createdAt: "desc" },
     take: 50,
   });
-  return res.json({ ok: true, fires: fires.map(serializeFire) });
+
+  // Enrich each fire with human-readable market context. Look up the marketId
+  // across all 5 market-source tables (FixtureMarket, PlayerPropMarket,
+  // TournamentMarket, TournamentSpecial, PredictionMarket) and return a
+  // marketRef { type, label, secondary } block so the activity dashboard can
+  // show "ARG vs FRA · 1x2" instead of just "Market #64".
+  const marketIds = [...new Set(fires.map((f) => f.marketId))];
+
+  const [fixMarkets, propMarkets, tourMarkets, specials, predictions] = await Promise.all([
+    prisma.fixtureMarket.findMany({
+      where: { marketId: { in: marketIds } },
+      include: { fixture: { select: { homeTeamName: true, awayTeamName: true, round: true, date: true } } },
+    }),
+    prisma.playerPropMarket.findMany({
+      where: { marketId: { in: marketIds } },
+      include: { fixture: { select: { homeTeamName: true, awayTeamName: true, round: true } } },
+    }),
+    prisma.tournamentMarket.findMany({ where: { marketId: { in: marketIds } } }),
+    prisma.tournamentSpecial.findMany({ where: { marketId: { in: marketIds } } }),
+    prisma.predictionMarket.findMany({ where: { marketId: { in: marketIds } } }),
+  ]);
+
+  type MarketRef = { type: string; label: string; secondary?: string };
+  const refByMarket = new Map<number, MarketRef>();
+
+  for (const fm of fixMarkets) {
+    refByMarket.set(fm.marketId, {
+      type: fm.outcomeCount === 3 ? "1X2" : "Knockout",
+      label: `${fm.fixture.homeTeamName} vs ${fm.fixture.awayTeamName}`,
+      secondary: fm.fixture.round,
+    });
+  }
+  for (const pm of propMarkets) {
+    const typeLabel = pm.type === "first_scorer" ? "First scorer" : pm.type === "over_under_25" ? "Over/Under 2.5" : pm.type === "btts" ? "Both teams score" : pm.type;
+    refByMarket.set(pm.marketId, {
+      type: typeLabel,
+      label: `${pm.fixture.homeTeamName} vs ${pm.fixture.awayTeamName}`,
+      secondary: pm.fixture.round,
+    });
+  }
+  for (const tm of tourMarkets) {
+    const typeLabel = tm.type === "winner" ? "Win Tournament" : tm.type === "to_reach_final" ? "Reach Final" : tm.type;
+    refByMarket.set(tm.marketId, {
+      type: typeLabel,
+      label: tm.teamName,
+      secondary: "Outright",
+    });
+  }
+  for (const ts of specials) {
+    refByMarket.set(ts.marketId, {
+      type: ts.type === "top_scorer" ? "Top Scorer" : ts.type === "group_winner" ? "Group Winner" : ts.type,
+      label: ts.question,
+      secondary: ts.groupLetter ? `Group ${ts.groupLetter}` : "Tournament-wide",
+    });
+  }
+  for (const pred of predictions) {
+    refByMarket.set(pred.marketId, {
+      type: "Prediction",
+      label: pred.question,
+      secondary: pred.category,
+    });
+  }
+
+  return res.json({
+    ok: true,
+    fires: fires.map((f) => ({
+      ...serializeFire(f),
+      marketRef: refByMarket.get(f.marketId) ?? { type: "Unknown", label: `Market #${f.marketId}` },
+    })),
+  });
 });
 
 /* -------------------------------------------------------------------------- */

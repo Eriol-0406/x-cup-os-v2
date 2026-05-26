@@ -73,9 +73,9 @@ Switching to live WC 2026 once API-Football plan is upgraded = change `WC_SEASON
 - [x] **32 on-chain binary markets per team** — one "Does <team> win the cup?" market per WC 2022 nation (markets 65-96). matchId pattern `WC2022-WINNER-{teamCode}`. POST `/admin/create-tournament-markets` (idempotent), POST `/admin/settle-tournament` (winning team → YES, others → NO). · _commit on next push_
 - [x] **TournamentMarketGrid UI** — compact card grid above Live Markets. Per card: team logo, name, current implied YES%, total pool, amount input + YES/NO bet buttons. Direct user-wallet stake (no AI agent — these are long-term sentiment bets). Settled markets show CHAMP / OUT badges. Sort by pot / odds / A-Z. 20s auto-refresh. · _commit on next push_
 
-### Still to do
-- [ ] **Live polling cron** — backend polls `/fixtures?live=all` every N minutes, detects status transition to FT/AET/PEN, auto-replays the fixture. Mostly valuable for live WC 2026; the historical replay covers the WC 2022 demo.
-- [ ] **Stronger RPC propagation handling** — replace 800ms / 1500ms `setTimeout` workarounds with `provider.waitForTransaction({confirmations: 2})` OR move to log-subscription / event-driven flow
+### Deferred to v2 (not blockers for submission)
+- [~] ~~**Live polling cron**~~ — would auto-replay fixtures when API-Football flips them to FT. Only meaningful for LIVE WC 2026 (paid plan); the user-driven `Replay this match →` button covers the WC 2022 historical demo completely. Architecture is ready (just add a `node-cron` task in `apps/api/src/index.ts` that calls `replayFixture()` per status transition). **Skipped because:** zero demo blocker and the trigger button reads better in a video than "wait 60 seconds for cron to fire."
+- [~] ~~**Stronger RPC propagation handling**~~ — current 800ms / 1500ms `setTimeout` workarounds are fragile but work reliably on X Layer testnet. The cleaner version is `provider.waitForTransaction({ confirmations: 2 })`. **Skipped because:** tech debt only, invisible to demo, swap is a 5-line change in two files when we want to do it.
 
 ---
 
