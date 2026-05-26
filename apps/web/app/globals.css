@@ -118,25 +118,27 @@ button {
 }
 .nav-link:hover { color: var(--text-1); background: var(--bg-2); text-decoration: none; }
 
-/* Header responsive — tighten at <1400px, drop optional links at <1100px,
-   stack everything below 700px. The wallet button + logo always stay. */
+/* Header responsive — NEVER hide nav items. Tighten + wrap instead so every
+   link stays reachable at any width. Logo stays left, wallet stays right.
+   At very narrow (<700px) the header stacks vertically. */
 @media (max-width: 1400px) {
-  .nav { gap: 2px; }
-  .nav-link { padding: 6px 8px; font-size: 13px; }
+  .header-inner { gap: 12px; }
+  .nav { gap: 1px; }
+  .nav-link { padding: 5px 7px; font-size: 12px; }
+  .logo { font-size: 14px; gap: 6px; }
   .logo-sub { display: none; }
 }
-@media (max-width: 1100px) {
-  .nav-link[href="/standings"],
-  .nav-link[href="/top-scorers"] {
-    display: none;
-  }
+@media (max-width: 1200px) {
+  /* Below 1200px, nav links wrap to a second row inside .nav. The header
+     grows taller but every link stays visible. */
+  .nav-link { padding: 4px 6px; font-size: 11px; }
+  .nav { max-width: 60%; }
 }
 @media (max-width: 900px) {
-  .header > .container { padding: 0 14px; }
-  .nav-link[href="/specials"],
-  .nav-link[href="/bracket"] {
-    display: none;
-  }
+  .header > .container { padding: 0 12px; }
+  .header-inner { gap: 6px; }
+  .nav-link { padding: 4px 5px; font-size: 10.5px; }
+  .nav { max-width: 65%; }
 }
 @media (max-width: 700px) {
   .header-inner {
@@ -145,7 +147,7 @@ button {
     gap: 8px;
   }
   .header-inner > .logo { margin-right: 0; justify-content: center; }
-  .header-inner > .nav { margin-left: 0; justify-content: center; }
+  .header-inner > .nav { margin-left: 0; max-width: 100%; justify-content: center; }
 }
 .btn {
   border: 1px solid var(--border);
