@@ -199,19 +199,21 @@ export async function processPlayerPropEvent(ev: PlayerPropEvent): Promise<FireR
 
     // Match the strategy's player against the actual first scorer first — if
     // they don't match, the trigger fails so don't stake.
-    const targetPlayer = playerCond.player.toLowerCase().trim();
-    const actualFirst = ev.firstScorer.toLowerCase().trim();
+    // Accent-strip both sides so "Vinicius" matches "Vinícius Júnior".
+    const normalize = (s: string) =>
+      s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+    const targetPlayer = normalize(playerCond.player);
+    const actualFirst = normalize(ev.firstScorer);
     if (!actualFirst.includes(targetPlayer) && !targetPlayer.includes(actualFirst)) continue;
 
     // Find which outcome idx in the player-prop market corresponds to the
     // strategy's named player. If they staked on Messi and Messi scored
     // first, the staking outcome IS Messi (which is also the winning outcome).
-    const playerOutcomeIdx = outcomes.findIndex(
-      (o) =>
-        o.playerName &&
-        (o.playerName.toLowerCase().includes(targetPlayer) ||
-          targetPlayer.includes(o.playerName.toLowerCase())),
-    );
+    const playerOutcomeIdx = outcomes.findIndex((o) => {
+      if (!o.playerName) return false;
+      const opn = normalize(o.playerName);
+      return opn.includes(targetPlayer) || targetPlayer.includes(opn);
+    });
     if (playerOutcomeIdx === -1) {
       // Player isn't an outcome in this market — fall back to "Other" bucket
       // (last outcome by convention)

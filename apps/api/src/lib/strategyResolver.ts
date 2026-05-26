@@ -2,6 +2,15 @@ import type { ParsedStrategy } from "@x-cup/types";
 import { prisma } from "../db.js";
 
 /**
+ * Normalize a string for fuzzy match — lowercased, accents stripped, trimmed.
+ * Critical for player names: "Vinicius" must match "Vinícius Júnior" (the
+ * accented form API-Football returns).
+ */
+function normMatch(s: string): string {
+  return s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+}
+
+/**
  * Resolve a parsed strategy's team mentions into a list of on-chain marketIds
  * the strategy is allowed to fire on.
  *
@@ -42,10 +51,10 @@ export async function resolveStrategyTargets(parsed: ParsedStrategy): Promise<nu
     });
     for (const f of fixturesWithMarket) {
       if (!f.market) continue;
-      const home = f.homeTeamName.toLowerCase();
-      const away = f.awayTeamName.toLowerCase();
+      const home = normMatch(f.homeTeamName);
+      const away = normMatch(f.awayTeamName);
       for (const team of teamMentions) {
-        const t = team.toLowerCase();
+        const t = normMatch(team);
         if (home.includes(t) || t.includes(home) || away.includes(t) || t.includes(away)) {
           matched.add(f.market.marketId);
           break;
@@ -58,18 +67,40 @@ export async function resolveStrategyTargets(parsed: ParsedStrategy): Promise<nu
   // "if Messi scores", we also include any first-scorer market where Messi
   // is one of the named outcomes.
   if (playerMentions.size > 0) {
-    const props = await prisma.playerPropMarket.findMany();
+    const props = await prisma.playerPropMarket.findMany({
+      where: { type: "first_scorer" }, // player-mention only resolves to scorer markets
+    });
     for (const p of props) {
       const outcomes = JSON.parse(p.outcomesJson) as Array<{ playerName?: string }>;
       for (const player of playerMentions) {
-        const pl = player.toLowerCase();
-        const hit = outcomes.some(
-          (o) =>
-            o.playerName &&
-            (o.playerName.toLowerCase().includes(pl) || pl.includes(o.playerName.toLowerCase())),
-        );
+        const pl = normMatch(player);
+        const hit = outcomes.some((o) => {
+          if (!o.playerName) return false;
+          const opn = normMatch(o.playerName);
+          return opn.includes(pl) || pl.includes(opn);
+        });
         if (hit) {
           matched.add(p.marketId);
+          break;
+        }
+      }
+    }
+  }
+
+  // 3. Tournament-winner & to-reach-final markets keyed by team mention.
+  // A strategy that says "If Argentina wins" can fire on Argentina's
+  // tournament-winner market when Argentina wins the FINAL, and on
+  // Argentina's to-reach-final market when Argentina wins the SEMI.
+  if (teamMentions.size > 0) {
+    const tournamentMarkets = await prisma.tournamentMarket.findMany({
+      where: { type: { in: ["winner", "to_reach_final"] } },
+    });
+    for (const tm of tournamentMarkets) {
+      const tn = normMatch(tm.teamName);
+      for (const team of teamMentions) {
+        const t = normMatch(team);
+        if (tn.includes(t) || t.includes(tn)) {
+          matched.add(tm.marketId);
           break;
         }
       }

@@ -33,6 +33,7 @@ export interface ReplayResult {
   propSettle?: { ok: boolean; reason?: string; txHash?: string; winningOutcome?: number; winningPlayer?: string };
   propFires?: FireResult[];
   propClaims?: SettleResult | null;
+  tournamentFires?: FireResult[];
 }
 
 export async function replayFixture(fixtureId: number): Promise<ReplayResult> {
@@ -104,6 +105,46 @@ export async function replayFixture(fixtureId: number): Promise<ReplayResult> {
     }
   }
 
+  // Phase B'' — fire on tournament-winner / to-reach-final markets when the
+  // round + winner combo unlocks them.
+  //   - Round of 16 / QF / SF win → fires on the winner's to-reach-final market
+  //   - Final win                  → fires on the winner's tournament-winner market
+  // The strategy's targetMarketIds already includes these (resolver does it
+  // when any team is mentioned), so we just need to build the events.
+  const tournamentFires: FireResult[] = [];
+  const winnerTeamName = (() => {
+    if (matchEvent.homeScore > matchEvent.awayScore) return matchEvent.homeTeam;
+    if (matchEvent.awayScore > matchEvent.homeScore) return matchEvent.awayTeam;
+    if (matchEvent.penaltyHome != null && matchEvent.penaltyAway != null) {
+      return matchEvent.penaltyHome > matchEvent.penaltyAway ? matchEvent.homeTeam : matchEvent.awayTeam;
+    }
+    return null;
+  })();
+  if (winnerTeamName) {
+    const norm = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+    const winNorm = norm(winnerTeamName);
+    const isFinal = /^final$/i.test(fixture.round);
+    const isSemi = /semi/i.test(fixture.round);
+
+    if (isFinal || isSemi) {
+      const tmType = isFinal ? "winner" : "to_reach_final";
+      const tournamentMarkets = await prisma.tournamentMarket.findMany({
+        where: { type: tmType },
+      });
+      const tmForWinner = tournamentMarkets.find((t) => {
+        const tn = norm(t.teamName);
+        return tn.includes(winNorm) || winNorm.includes(tn);
+      });
+      if (tmForWinner) {
+        // Build a tournament-event: same teams + scores, but redirect the
+        // marketId + winningOutcomeIdx to the tournament market (YES = 0).
+        const tournamentEvent = { ...matchEvent, marketId: tmForWinner.marketId, winningOutcomeIdx: 0 };
+        const tFires = await processMatchEvent(tournamentEvent);
+        tournamentFires.push(...tFires);
+      }
+    }
+  }
+
   // Phase C + D — settle the market, auto-claim for winners.
   const settle = await settleAndClaim(matchEvent.marketId, matchEvent.winningOutcomeIdx);
 
@@ -143,5 +184,6 @@ export async function replayFixture(fixtureId: number): Promise<ReplayResult> {
     propSettle,
     propFires,
     propClaims,
+    tournamentFires,
   };
 }
