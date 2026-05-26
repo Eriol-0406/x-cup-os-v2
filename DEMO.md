@@ -174,6 +174,52 @@ curl -X POST http://localhost:4000/admin/settle-tournament \
 
 ---
 
+### Beat 6.5 — "Anyone can follow a winning agent" (45 seconds)
+
+> Demonstrates Pillar 3's social layer. Requires a pre-provisioned second
+> wallet — run `node scripts/setup-second-user.mjs` BEFORE recording.
+
+**Pre-recording (do once):**
+
+```bash
+cd ~/x-cup-os
+node scripts/setup-second-user.mjs
+```
+
+The script prints a fresh wallet (address + privkey + mnemonic), provisions
+its burner via the API, and funds:
+- Main wallet with 0.005 OKB (for signing the Copy → tx)
+- Burner with 100 USDC + 0.005 OKB (for firing copied strategies)
+
+**Import into OKX Wallet:** Settings → Wallets → Import → "Private Key" →
+paste the printed key. Keep both User A (deployer) and User B (just imported)
+in your wallet account list.
+
+**Recording:**
+
+1. Open `localhost:3001/leaderboard` — header shows User A's wallet, top of
+   leaderboard shows your "If Argentina wins…" strategy
+2. **In OKX Wallet, switch active account to User B**
+3. Refresh — header now shows User B's truncated address
+4. `/leaderboard` re-renders — User A's strategy now shows a **"Copy →"** button
+   (User B can copy because it's not their own)
+5. Click **Copy →**. Status flashes "Copying…" then "✓ Cloned + activated in
+   your account"
+6. Navigate to `/match`, click **Replay this match →** on, say, Argentina vs
+   Australia
+7. **Both User A's original strategy AND User B's copy fire** — two `fire(s)`
+   show in the replay response, two separate burner addresses staked, two
+   separate USDC transfers on chain
+
+**Narration:** *"Anyone who deposits USDC can clone a winning strategy with
+one click. User B is a fresh wallet — never deployed a strategy themselves.
+They just copied User A's. When the match replays, both agents fire
+independently with their own funds, both burners get their own claim. This
+is how betting strategies spread on X-Cup OS — not via Telegram screenshots,
+on-chain."*
+
+---
+
 ### Beat 7 — "Wrap" (10 seconds)
 
 **Narration:** *"X-Cup OS — write a strategy in English, an AI agent does the rest, every transaction on X Layer. Built in 7 days for the X Cup hackathon. Repo and contracts in the description."*
