@@ -130,6 +130,8 @@ export function KnockoutBracket() {
   );
 }
 
+import Link from "next/link";
+
 function BracketMatch({ f }: { f: FixtureRecord }) {
   const settled = ["FT", "AET", "PEN"].includes(f.status);
   let winningSide: "home" | "away" | "draw" | null = null;
@@ -141,8 +143,8 @@ function BracketMatch({ f }: { f: FixtureRecord }) {
     } else winningSide = "draw";
   }
 
-  return (
-    <div className="bracket-match">
+  const content = (
+    <>
       <div className={`bracket-team${winningSide === "home" ? " bracket-team-winner" : ""}`}>
         <Image src={f.home.logo} alt={f.home.name} width={20} height={20} unoptimized />
         <span className="bracket-team-name">{f.home.name}</span>
@@ -155,8 +157,20 @@ function BracketMatch({ f }: { f: FixtureRecord }) {
       </div>
       <div className="bracket-meta">
         {f.penalty && <span>(P {f.penalty.home}-{f.penalty.away}) · </span>}
-        {f.market && <span>M#{f.market.marketId}</span>}
+        {f.market && <span>{settled ? "Settled" : "Bet →"} M#{f.market.marketId}</span>}
       </div>
-    </div>
+    </>
+  );
+
+  // Bracket items are clickable — they link to the /match page where the
+  // user can stake on this fixture's 1x2 market + first-scorer + over/under.
+  return (
+    <Link
+      href="/match"
+      className="bracket-match"
+      title={settled ? "View settled market" : "Open this match's bet options"}
+    >
+      {content}
+    </Link>
   );
 }

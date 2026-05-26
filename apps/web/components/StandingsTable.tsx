@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchStandings, type StandingsTeam } from "@/lib/api";
 
@@ -32,9 +33,16 @@ export function StandingsTable() {
 
   return (
     <div className="standings-grid">
-      {groups.map((g, idx) => (
+      {groups.map((g, idx) => {
+        const groupName = g[0]?.group ?? `Group ${idx + 1}`;
+        return (
         <div key={idx} className="standings-group">
-          <div className="standings-group-title">{g[0]?.group ?? `Group ${idx + 1}`}</div>
+          <div className="standings-group-header">
+            <span className="standings-group-title">{groupName}</span>
+            <Link href="/outrights" className="standings-bet-link" title={`Bet on ${groupName} Winner outright`}>
+              Bet → Group Winner
+            </Link>
+          </div>
           <table className="standings-table">
             <thead>
               <tr>
@@ -67,7 +75,8 @@ export function StandingsTable() {
             </tbody>
           </table>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
