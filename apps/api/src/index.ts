@@ -9,6 +9,7 @@ import { tournamentMarketsRouter } from "./routes/tournamentMarkets.js";
 import { playerPropsRouter } from "./routes/playerProps.js";
 import { predictionMarketsRouter } from "./routes/predictionMarkets.js";
 import { statsRouter } from "./routes/stats.js";
+import { playersRouter } from "./routes/players.js";
 import { specialsRouter } from "./routes/specials.js";
 import { prisma } from "./db.js";
 import { warmupTeamCache } from "./lib/teams.js";
@@ -30,6 +31,7 @@ app.use("/tournament-markets", tournamentMarketsRouter);
 app.use("/player-prop-markets", playerPropsRouter);
 app.use("/prediction-markets", predictionMarketsRouter);
 app.use("/stats", statsRouter);
+app.use("/players", playersRouter);
 app.use("/tournament-specials", specialsRouter);
 
 /** GET /teams — cached Team rows with group letters (for /match group filter). */

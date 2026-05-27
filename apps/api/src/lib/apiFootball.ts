@@ -261,6 +261,54 @@ export async function fetchPredictions(fixtureId: number): Promise<ApiPrediction
   return arr[0]!.predictions;
 }
 
+/* ---- Lineups + player profile ---- */
+
+export interface ApiLineupPlayer {
+  player: { id: number; name: string; number: number; pos: string | null; grid: string | null };
+}
+
+export interface ApiLineupTeam {
+  team: { id: number; name: string; logo: string; colors?: any };
+  formation: string;
+  startXI: ApiLineupPlayer[];
+  substitutes: ApiLineupPlayer[];
+  coach?: { id: number; name: string; photo: string };
+}
+
+export async function fetchLineups(fixtureId: number): Promise<ApiLineupTeam[]> {
+  const arr = await get<ApiLineupTeam[]>("/fixtures/lineups", { fixture: fixtureId });
+  return arr ?? [];
+}
+
+export interface ApiPlayerProfile {
+  player: {
+    id: number;
+    name: string;
+    firstname: string;
+    lastname: string;
+    age: number;
+    birth: { date: string; place: string; country: string };
+    nationality: string;
+    height: string | null;
+    weight: string | null;
+    photo: string;
+    injured: boolean;
+  };
+  statistics: Array<{
+    team: { id: number; name: string; logo: string };
+    league: { name: string; season: number };
+    games: { appearences: number; lineups: number; minutes: number; position: string; rating: string | null };
+    goals: { total: number | null; assists: number | null };
+    cards: { yellow: number; red: number };
+  }>;
+}
+
+export async function fetchPlayer(playerId: number, season: number): Promise<ApiPlayerProfile | null> {
+  const arr = await get<ApiPlayerProfile[]>("/players", { id: playerId, season });
+  if (!arr.length) return null;
+  return arr[0]!;
+}
+
 /** Account/quota status — useful for the dashboard or debugging. */
 export async function fetchAccountStatus(): Promise<{
   account: { firstname: string; lastname: string; email: string };

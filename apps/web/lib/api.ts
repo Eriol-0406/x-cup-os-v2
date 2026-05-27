@@ -403,6 +403,67 @@ export async function fetchOddsComparison(fixtureId: number): Promise<OddsCompar
   return json as OddsComparisonResult;
 }
 
+/* ---- Lineups + player profile ---- */
+
+export interface LineupPlayer {
+  id: number;
+  name: string;
+  number: number;
+  pos: string | null;
+  grid: string | null;
+}
+
+export interface LineupTeam {
+  team: { id: number; name: string; logo: string };
+  formation: string;
+  startXI: LineupPlayer[];
+  substitutes: LineupPlayer[];
+  coach: { id: number; name: string; photo: string } | null;
+}
+
+export async function fetchLineups(fixtureId: number): Promise<LineupTeam[]> {
+  const res = await fetch(`${API_URL}/fixtures/${fixtureId}/lineups`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load lineups");
+  return (json.teams as LineupTeam[]) ?? [];
+}
+
+export interface PlayerProfileResult {
+  player: {
+    id: number;
+    name: string;
+    firstname: string;
+    lastname: string;
+    age: number;
+    nationality: string;
+    birth: { date: string; place: string; country: string };
+    height: string | null;
+    weight: string | null;
+    photo: string;
+    injured: boolean;
+  };
+  stats: {
+    team: { id: number; name: string; logo: string };
+    league: { name: string; season: number };
+    appearances: number;
+    lineups: number;
+    minutes: number;
+    position: string;
+    rating: string | null;
+    goals: number;
+    assists: number;
+    yellow: number;
+    red: number;
+  } | null;
+}
+
+export async function fetchPlayer(playerId: number): Promise<PlayerProfileResult> {
+  const res = await fetch(`${API_URL}/players/${playerId}`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load player");
+  return json as PlayerProfileResult;
+}
+
 export async function listPredictionMarkets(): Promise<PredictionMarketView[]> {
   const res = await fetch(`${API_URL}/prediction-markets`);
   const json = await res.json();

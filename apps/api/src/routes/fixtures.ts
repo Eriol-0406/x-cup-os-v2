@@ -4,7 +4,7 @@ import { ethers } from "ethers";
 import { XCupMarketAbi, getDeployment } from "@x-cup/abi";
 import { prisma } from "../db.js";
 import { env } from "../env.js";
-import { fetchHeadToHead, fetchPredictions } from "../lib/apiFootball.js";
+import { fetchHeadToHead, fetchPredictions, fetchLineups } from "../lib/apiFootball.js";
 
 export const fixturesRouter = Router();
 
@@ -204,6 +204,32 @@ fixturesRouter.get("/:id/odds-comparison", async (req, res) => {
     pool,
     delta,
   });
+});
+
+/**
+ * GET /fixtures/:id/lineups — starting XI + formation for both teams.
+ *
+ * Free-tier compatible. Cached aggressively (lineups don't change after match).
+ */
+fixturesRouter.get("/:id/lineups", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: "invalid id" });
+  try {
+    const teams = await fetchLineups(id);
+    return res.json({
+      ok: true,
+      fixtureId: id,
+      teams: teams.map((t) => ({
+        team: t.team,
+        formation: t.formation,
+        startXI: t.startXI.map((p) => p.player),
+        substitutes: t.substitutes.map((p) => p.player),
+        coach: t.coach ?? null,
+      })),
+    });
+  } catch (err: any) {
+    return res.status(502).json({ ok: false, error: err?.message ?? "lineups fetch failed" });
+  }
 });
 
 /** Get the distinct rounds available — useful for filter UI. */

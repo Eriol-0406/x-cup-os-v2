@@ -17,6 +17,7 @@ import { MarketFilter } from "./MarketFilter";
 import { PlayerPropsPanel } from "./PlayerPropsPanel";
 import { H2HModal } from "./H2HModal";
 import { OddsComparisonPanel } from "./OddsComparisonPanel";
+import { LineupsPanel } from "./LineupsPanel";
 
 const EXPLORER = "https://www.oklink.com/x-layer-testnet";
 
@@ -188,6 +189,7 @@ function FixtureCard({ f }: { f: FixtureRecord }) {
   const [propsOpen, setPropsOpen] = useState(false);
   const [propsRefresh, setPropsRefresh] = useState(0);
   const [oddsOpen, setOddsOpen] = useState(false);
+  const [lineupsOpen, setLineupsOpen] = useState(false);
   const [h2hOpen, setH2hOpen] = useState(false);
 
   const onReplay = async () => {
@@ -280,9 +282,13 @@ function FixtureCard({ f }: { f: FixtureRecord }) {
         <button className="btn prop-toggle-btn" onClick={() => setOddsOpen((v) => !v)}>
           📊 {oddsOpen ? "Hide model vs pool" : "Model vs pool"}
         </button>
+        <button className="btn prop-toggle-btn" onClick={() => setLineupsOpen((v) => !v)}>
+          👥 {lineupsOpen ? "Hide lineups" : "Lineups"}
+        </button>
       </div>
       {propsOpen && <PlayerPropsPanel fixtureId={f.id} refreshKey={propsRefresh} />}
       {oddsOpen && <OddsComparisonPanel fixtureId={f.id} />}
+      {lineupsOpen && <LineupsPanel fixtureId={f.id} />}
       {h2hOpen && (
         <H2HModal teamA={f.home} teamB={f.away} onClose={() => setH2hOpen(false)} />
       )}
