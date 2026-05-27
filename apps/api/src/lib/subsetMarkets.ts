@@ -3,6 +3,7 @@ import { XCupMarketAbi, getDeployment } from "@x-cup/abi";
 import { prisma } from "../db.js";
 import { env } from "../env.js";
 import { fetchTopScorers } from "./apiFootball.js";
+import { MarketFees } from "./marketFees.js";
 
 /**
  * Per-fixture sub-markets beyond match-winner (1x2):
@@ -22,8 +23,14 @@ function adminContract() {
   return new ethers.Contract(deployment.contracts.XCupMarket.address, XCupMarketAbi as any, admin) as any;
 }
 
-async function createOnChainMarket(market: any, matchId: string, outcomeCount: number, closeTime: number) {
-  const tx = await market.createMarket(matchId, outcomeCount, closeTime);
+async function createOnChainMarket(
+  market: any,
+  matchId: string,
+  outcomeCount: number,
+  closeTime: number,
+  feeBps: number,
+) {
+  const tx = await market.createMarket(matchId, outcomeCount, closeTime, feeBps);
   const receipt = await tx.wait();
   const log = receipt.logs.find((l: any) => {
     try {
@@ -51,6 +58,7 @@ export interface CreatedSubMarket {
 async function createPerFixtureBinary(
   type: string,
   outcomeLabels: [string, string],
+  feeBps: number,
 ): Promise<{ created: CreatedSubMarket[]; skipped: number; failed: number }> {
   const fixtures = await prisma.fixture.findMany({
     include: { playerProps: true },
@@ -70,7 +78,7 @@ async function createPerFixtureBinary(
     const matchId = `WC${env.WC_SEASON}-${f.id}-${type}`;
     const closeTime = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
     try {
-      const { marketId, txHash } = await createOnChainMarket(market, matchId, 2, closeTime);
+      const { marketId, txHash } = await createOnChainMarket(market, matchId, 2, closeTime, feeBps);
       await prisma.playerPropMarket.create({
         data: {
           fixtureId: f.id,
@@ -96,11 +104,11 @@ async function createPerFixtureBinary(
 }
 
 export async function createOverUnderMarkets() {
-  return createPerFixtureBinary("over_under_25", ["Over 2.5", "Under 2.5"]);
+  return createPerFixtureBinary("over_under_25", ["Over 2.5", "Under 2.5"], MarketFees.OVER_UNDER_25);
 }
 
 export async function createBTTSMarkets() {
-  return createPerFixtureBinary("btts", ["YES — both teams score", "NO — at least one team blanks"]);
+  return createPerFixtureBinary("btts", ["YES — both teams score", "NO — at least one team blanks"], MarketFees.BTTS);
 }
 
 /**
@@ -127,7 +135,7 @@ export async function createToReachFinalMarkets(): Promise<CreatedSubMarket[]> {
     const code = t.code ?? t.name.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
     const matchId = `WC${env.WC_SEASON}-FINAL-${code}`;
     try {
-      const { marketId, txHash } = await createOnChainMarket(market, matchId, 2, closeTime);
+      const { marketId, txHash } = await createOnChainMarket(market, matchId, 2, closeTime, MarketFees.TO_REACH_FINAL);
       await prisma.tournamentMarket.create({
         data: {
           season: env.WC_SEASON,
@@ -179,7 +187,7 @@ export async function createTopScorerMarket(): Promise<CreatedSubMarket | { skip
   const market = adminContract();
   const matchId = `WC${env.WC_SEASON}-TOPSCORER`;
   const closeTime = Math.floor(Date.now() / 1000) + 30 * 24 * 3600;
-  const { marketId, txHash } = await createOnChainMarket(market, matchId, outcomes.length, closeTime);
+  const { marketId, txHash } = await createOnChainMarket(market, matchId, outcomes.length, closeTime, MarketFees.TOP_SCORER);
 
   await prisma.tournamentSpecial.create({
     data: {
@@ -236,7 +244,7 @@ export async function createGroupWinnerMarkets(): Promise<CreatedSubMarket[]> {
     }));
     const matchId = `WC${env.WC_SEASON}-GROUP-${letter}-WINNER`;
     try {
-      const { marketId, txHash } = await createOnChainMarket(market, matchId, outcomes.length, closeTime);
+      const { marketId, txHash } = await createOnChainMarket(market, matchId, outcomes.length, closeTime, MarketFees.GROUP_WINNER);
       await prisma.tournamentSpecial.create({
         data: {
           season: env.WC_SEASON,

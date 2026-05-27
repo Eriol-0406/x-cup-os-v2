@@ -213,6 +213,7 @@ export interface TournamentMarketRecord {
   totalPotUsdc: number;
   impliedYesProb: number;
   closeTime: number;
+  feeBps?: number;
   createMarketTx: string;
   error?: string;
 }
@@ -222,6 +223,33 @@ export async function listTournamentMarkets(): Promise<TournamentMarketRecord[]>
   const json = await res.json();
   if (!json.ok) throw new Error(json.error ?? "Failed to list tournament markets");
   return json.markets as TournamentMarketRecord[];
+}
+
+/* ---- Arb signals (inline chips on outright cards) ---- */
+
+export interface ArbWinnerVsRfSignal {
+  type: "winner_vs_reach_final";
+  team: { id: number; name: string; logo: string; code: string | null };
+  winner: { marketId: number; yesProb: number; totalPotUsdc: number };
+  reachFinal: { marketId: number; yesProb: number; totalPotUsdc: number };
+  gap: number;
+  explanation: string;
+  arbAction: string;
+}
+
+export interface ArbSignalsResponse {
+  ok: boolean;
+  generatedAt: string;
+  signals: {
+    winnerVsReachFinal: ArbWinnerVsRfSignal[];
+    global: Array<{ type: string; explanation: string; sum: number; expected: number }>;
+  };
+}
+
+/** Fetches arb signals. Used by OutrightsHub to flag mispriced teams on their winner/reach-final cards. */
+export async function fetchArbSignals(): Promise<ArbSignalsResponse> {
+  const res = await fetch(`${API_URL}/arb-signals`, { cache: "no-store" });
+  return (await res.json()) as ArbSignalsResponse;
 }
 
 /* ---- Leaderboard + copy strategy ---- */

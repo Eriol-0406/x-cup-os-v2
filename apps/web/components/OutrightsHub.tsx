@@ -7,8 +7,10 @@ import {
   listTournamentMarkets,
   listTournamentMarketsByType,
   listTournamentSpecials,
+  fetchArbSignals,
   type TournamentMarketRecord,
   type TournamentSpecialView,
+  type ArbWinnerVsRfSignal,
 } from "@/lib/api";
 import { mockUsdc, signerProvider, xcupMarket } from "@/lib/contract";
 import { useWallet } from "./WalletProvider";
@@ -19,8 +21,41 @@ const WALLET_TIMEOUT_MS = 90_000;
 
 type Tab = "winner" | "to_reach_final" | "top_scorer" | "group_winner";
 
+/**
+ * Returns a Map<teamId → signal> of every team that has a winner_vs_reach_final
+ * mispricing. Cards in the Winner + Reach-Final tabs render a ⚠ chip when their
+ * team appears in this map.
+ */
+function useArbViolations() {
+  const [byTeam, setByTeam] = useState<Map<number, ArbWinnerVsRfSignal>>(new Map());
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const r = await fetchArbSignals();
+        if (cancelled) return;
+        const m = new Map<number, ArbWinnerVsRfSignal>();
+        for (const s of r.signals?.winnerVsReachFinal ?? []) {
+          m.set(s.team.id, s);
+        }
+        setByTeam(m);
+      } catch {
+        // silent — chip just won't show; the underlying markets still work
+      }
+    };
+    void load();
+    const t = setInterval(load, 30_000); // refresh every 30s alongside the cards' own 20s
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
+  return byTeam;
+}
+
 export function OutrightsHub() {
   const [tab, setTab] = useState<Tab>("winner");
+  const arbViolations = useArbViolations();
 
   return (
     <div>
@@ -32,8 +67,8 @@ export function OutrightsHub() {
       </div>
 
       <div style={{ marginTop: 20 }}>
-        {tab === "winner" && <TournamentMarketGrid />}
-        {tab === "to_reach_final" && <ToReachFinalGrid />}
+        {tab === "winner" && <TournamentMarketGrid arbViolations={arbViolations} />}
+        {tab === "to_reach_final" && <ToReachFinalGrid arbViolations={arbViolations} />}
         {tab === "top_scorer" && <SpecialsList type="top_scorer" />}
         {tab === "group_winner" && <SpecialsList type="group_winner" />}
       </div>
@@ -55,7 +90,7 @@ function TabBtn({ id, label, current, onClick }: { id: Tab; label: string; curre
 /** Reuses TournamentMarketGrid's UI but pre-filters to type=to_reach_final.
  *  Since TournamentMarketGrid hardcodes the "winner" endpoint, we render our
  *  own simpler card grid for this. */
-function ToReachFinalGrid() {
+function ToReachFinalGrid({ arbViolations }: { arbViolations: Map<number, ArbWinnerVsRfSignal> }) {
   const [markets, setMarkets] = useState<TournamentMarketRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -80,7 +115,7 @@ function ToReachFinalGrid() {
       </div>
       <div className="tourney-grid">
         {markets.map((m) => (
-          <ToReachFinalCard key={m.teamId} m={m} />
+          <ToReachFinalCard key={m.teamId} m={m} signal={arbViolations.get(m.teamId)} />
         ))}
       </div>
     </div>
@@ -89,7 +124,7 @@ function ToReachFinalGrid() {
 
 type StakeState = { kind: "idle" } | { kind: "running"; outcome: 0 | 1 } | { kind: "done"; tx: string } | { kind: "error"; message: string };
 
-function ToReachFinalCard({ m }: { m: TournamentMarketRecord }) {
+function ToReachFinalCard({ m, signal }: { m: TournamentMarketRecord; signal?: ArbWinnerVsRfSignal }) {
   const { state: walletState, connect } = useWallet();
   const [amount, setAmount] = useState("10");
   const [stake, setStake] = useState<StakeState>({ kind: "idle" });
@@ -141,6 +176,7 @@ function ToReachFinalCard({ m }: { m: TournamentMarketRecord }) {
         <span style={{ color: m.impliedYesProb > 0 ? "var(--success)" : "var(--text-3)" }}>YES {(m.impliedYesProb * 100).toFixed(0)}%</span>
         <span style={{ color: "var(--text-3)" }}>{m.totalPotUsdc} USDC pool</span>
       </div>
+      {signal && <ArbChip signal={signal} side="reach_final" />}
       <div className="tourney-bet-row">
         <input type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} className="tourney-input" />
         <button className="tourney-bet-btn tourney-bet-yes" onClick={() => onBet(0)} disabled={stake.kind === "running"}>YES</button>
@@ -163,6 +199,50 @@ function ToReachFinalCard({ m }: { m: TournamentMarketRecord }) {
           <button className="tourney-cancel" onClick={() => setStake({ kind: "idle" })}>dismiss</button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Inline mispricing chip rendered on Winner + Reach-Final cards for teams that
+ * violate the P(winner) ≤ P(reach_final) constraint. Hover for the full
+ * explanation. The full /arb-signals JSON remains available for agents.
+ */
+export function ArbChip({
+  signal,
+  side,
+}: {
+  signal: ArbWinnerVsRfSignal;
+  side: "winner" | "reach_final";
+}) {
+  const gapPct = (signal.gap * 100).toFixed(1);
+  const direction =
+    side === "winner"
+      ? "Winner overpriced vs reach-final — consider NO on this card."
+      : "Reach-final underpriced vs winner — consider YES on this card.";
+  return (
+    <div
+      title={`${signal.explanation}\n\n${signal.arbAction}\n\n${direction}`}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        marginTop: 8,
+        padding: "4px 8px",
+        borderRadius: 6,
+        border: "1px solid rgba(248, 113, 113, 0.3)",
+        background: "rgba(248, 113, 113, 0.06)",
+        fontSize: 11,
+        color: "#f87171",
+        cursor: "help",
+        lineHeight: 1.3,
+      }}
+    >
+      <span style={{ fontSize: 13 }}>⚠</span>
+      <span style={{ fontWeight: 600 }}>{gapPct}% mispricing</span>
+      <span style={{ color: "var(--text-3)", fontWeight: 400 }}>
+        vs {side === "winner" ? "reach-final" : "winner"}
+      </span>
     </div>
   );
 }

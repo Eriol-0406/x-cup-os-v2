@@ -11,6 +11,7 @@ import { predictionMarketsRouter } from "./routes/predictionMarkets.js";
 import { statsRouter } from "./routes/stats.js";
 import { playersRouter } from "./routes/players.js";
 import { specialsRouter } from "./routes/specials.js";
+import { arbRouter } from "./routes/arb.js";
 import { prisma } from "./db.js";
 import { warmupTeamCache } from "./lib/teams.js";
 
@@ -33,6 +34,7 @@ app.use("/prediction-markets", predictionMarketsRouter);
 app.use("/stats", statsRouter);
 app.use("/players", playersRouter);
 app.use("/tournament-specials", specialsRouter);
+app.use("/arb-signals", arbRouter);
 
 /** GET /teams — cached Team rows with group letters (for /match group filter). */
 app.get("/teams", async (_req, res) => {

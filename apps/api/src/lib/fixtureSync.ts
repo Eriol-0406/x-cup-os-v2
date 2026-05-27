@@ -7,6 +7,7 @@ import {
   fixtureOutcomeCount,
   type ApiFixtureRaw,
 } from "./apiFootball.js";
+import { MarketFees } from "./marketFees.js";
 
 /**
  * Pull every fixture for the configured WC season from API-Football and upsert
@@ -121,7 +122,7 @@ export async function createMissingMarkets(maxToCreate?: number): Promise<Create
     const closeTime = fixtureUnix > nowUnix ? fixtureUnix : nowUnix + 7 * 24 * 3600;
 
     try {
-      const tx = await market.createMarket(matchId, outcomeCount, closeTime);
+      const tx = await market.createMarket(matchId, outcomeCount, closeTime, MarketFees.FIXTURE_1X2);
       const receipt = await tx.wait();
 
       // Parse the MarketCreated event to get the marketId

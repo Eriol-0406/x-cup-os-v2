@@ -56,6 +56,7 @@ tournamentMarketsRouter.get("/", async (req, res) => {
             totalPotUsdc: Number(ethers.formatUnits(total, 6)),
             impliedYesProb,
             closeTime: Number(onchain.closeTime),
+            feeBps: Number(onchain.feeBps),
             createMarketTx: r.createMarketTx,
           };
         } catch (err: any) {
@@ -72,6 +73,7 @@ tournamentMarketsRouter.get("/", async (req, res) => {
             totalPotUsdc: 0,
             impliedYesProb: 0,
             closeTime: 0,
+            feeBps: 0,
             createMarketTx: r.createMarketTx,
             error: err?.message ?? "read failed",
           };

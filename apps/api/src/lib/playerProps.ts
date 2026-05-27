@@ -3,6 +3,7 @@ import { XCupMarketAbi, getDeployment } from "@x-cup/abi";
 import { prisma } from "../db.js";
 import { env } from "../env.js";
 import { fetchFixture, type ApiFixtureRaw, type ApiFixtureEvent } from "./apiFootball.js";
+import { MarketFees } from "./marketFees.js";
 
 /**
  * Per-fixture player-prop markets — currently only "first goal scorer".
@@ -147,7 +148,7 @@ export async function createFirstScorerMarkets(opts: {
 
       const outcomes = buildFirstScorerOutcomes(result.distinctScorers);
       const onChainMatchId = `WC${env.WC_SEASON}-FS-${f.id}`;
-      const tx = await market.createMarket(onChainMatchId, outcomes.length, closeTime);
+      const tx = await market.createMarket(onChainMatchId, outcomes.length, closeTime, MarketFees.FIRST_SCORER);
       const receipt = await tx.wait();
 
       const log = receipt.logs.find((l: any) => {

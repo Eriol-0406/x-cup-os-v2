@@ -29,8 +29,12 @@ contract Deploy is Script {
         usdc.mint(deployer, 10_000 * 1e6); // 10k USDC for testing
         console2.log("MockUSDC:", address(usdc));
 
-        XCupMarket xcup = new XCupMarket(IERC20(address(usdc)), deployer);
+        // For testnet: treasury = deployer wallet (call setTreasury later to swap
+        // to a Gnosis Safe). Constructor reverts on the zero address so we
+        // always pass a real recipient at deploy time.
+        XCupMarket xcup = new XCupMarket(IERC20(address(usdc)), deployer, deployer);
         console2.log("XCupMarket:", address(xcup));
+        console2.log("treasury (initial = deployer):", deployer);
 
         vm.stopBroadcast();
     }

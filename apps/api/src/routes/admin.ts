@@ -17,6 +17,7 @@ import {
   createTopScorerMarket,
   createGroupWinnerMarkets,
 } from "../lib/subsetMarkets.js";
+import { MarketFees } from "../lib/marketFees.js";
 import {
   createPredictionMarket,
   seedDefaultPredictions,
@@ -101,6 +102,19 @@ adminRouter.post("/settle-tournament", async (req, res) => {
     console.error("[POST /admin/settle-tournament]", err);
     return res.status(500).json({ ok: false, error: err?.message ?? String(err) });
   }
+});
+
+/**
+ * GET /admin/fee-schedule — per-category feeBps applied at market creation
+ * time. Used by the UI to display "X% fee" tags and by docs/demos.
+ */
+adminRouter.get("/fee-schedule", (_req, res) => {
+  res.json({
+    ok: true,
+    maxFeeBps: 500,
+    fees: MarketFees,
+    note: "Basis points (100 = 1%). Capped at MAX_FEE_BPS=500. Easier markets (1x2) take more vig, harder outrights take less.",
+  });
 });
 
 /**

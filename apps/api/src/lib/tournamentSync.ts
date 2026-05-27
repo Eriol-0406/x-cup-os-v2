@@ -3,6 +3,7 @@ import { XCupMarketAbi, getDeployment } from "@x-cup/abi";
 import { prisma } from "../db.js";
 import { env } from "../env.js";
 import { fetchWCTeams } from "./teams.js";
+import { MarketFees } from "./marketFees.js";
 
 /**
  * Pillar 1 — tournament-winner markets.
@@ -60,7 +61,7 @@ export async function createTournamentMarkets(): Promise<CreatedTournamentMarket
     const code = t.code ?? t.name.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
     const matchId = `WC${env.WC_SEASON}-WINNER-${code}`;
     try {
-      const tx = await market.createMarket(matchId, 2, closeTime);
+      const tx = await market.createMarket(matchId, 2, closeTime, MarketFees.TOURNAMENT_WINNER);
       const receipt = await tx.wait();
 
       // Parse MarketCreated to extract marketId

@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import { XCupMarketAbi, getDeployment } from "@x-cup/abi";
 import { prisma } from "../db.js";
 import { env } from "../env.js";
+import { MarketFees } from "./marketFees.js";
 
 /**
  * Pillar-2 prediction markets — binary YES/NO opinion bets that don't tie to
@@ -59,7 +60,7 @@ export async function createPredictionMarket(input: CreatePredictionInput): Prom
   const matchId = `WC${env.WC_SEASON}-PRED-${input.slug}`;
   const closeTime = Math.floor(Date.now() / 1000) + 30 * 24 * 3600; // 30-day betting window
 
-  const tx = await market.createMarket(matchId, 2, closeTime);
+  const tx = await market.createMarket(matchId, 2, closeTime, MarketFees.PREDICTION_OPINION);
   const receipt = await tx.wait();
 
   const log = receipt.logs.find((l: any) => {

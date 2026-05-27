@@ -6,16 +6,17 @@
     "deployer": "0xFaC819e2465C24529ad3684D61BFb442cC239d8E",
     "contracts": {
       "MockUSDC": {
-        "address": "0x47C57Eb98A9C025114aAd96b9f6048ffdc8Bb3fA",
-        "deployTx": "0xa6d9edc64544a38958e0677eb5816c0cb5e03a44b631f3f26fdf1382448c065c"
+        "address": "0x6D0ecefecCE861B9353Ca353ccfb39a1537335e6",
+        "deployTx": "0xda8aa9b636bc3d8305434d25b93dc8fe0e6fde85ba756cca188ce44bf4798d31"
       },
       "XCupMarket": {
-        "address": "0xb420447843a0868971A925C0c8ceC30c4b26b4f4",
-        "deployTx": "0xe1e2f787564ccf397ba70347f8e63a6a5497e0ca441aa871f2f38bd3aa292ea8"
+        "address": "0x5349be46935302f77acD6363D063efFE5DE27c42",
+        "deployTx": "0x15fa6160277aca9e803e15f04eae19ead37bf530e7997d56033e041ea05d923a"
       }
     },
     "seedMarkets": [],
-    "deployedAt": "2026-05-24T08:00:00.000Z",
-    "note": "Markets are now created lazily per fixture by the API's /admin/create-markets endpoint, mirroring API-Football data. The seedMarkets array stays empty going forward."
+    "deployedAt": "2026-05-27T08:55:00.000Z",
+    "treasury": "0xFaC819e2465C24529ad3684D61BFb442cC239d8E",
+    "note": "v2 deploy with variable per-market feeBps (capped at 5%) + settable treasury (admin can call setTreasury to swap to a Safe). Markets are created lazily per fixture by the API's /admin/* seed endpoints."
   }
 }

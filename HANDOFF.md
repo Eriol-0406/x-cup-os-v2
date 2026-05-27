@@ -25,9 +25,66 @@ X-Cup OS is an AI-agent betting dApp on **X Layer testnet** built for a hackatho
 
 ---
 
+## v2 status — DONE (2026-05-27)
+
+All three pending v2 items shipped in this session. v1 stays at `74b8584`; v2 diverges.
+
+| Item | Status | Where |
+|---|---|---|
+| Postgres migration (Railway) | ✅ done | `apps/api/.env` → `DATABASE_URL`, Prisma provider `postgresql`, fresh init migration in `prisma/migrations/20260527081353_init/` |
+| Variable fees per market + redeploy | ✅ done | `contracts/src/XCupMarket.sol` (added `feeBps`, `treasury`, `setTreasury`, fee deducted in `claim`). 20 Foundry tests pass. New contract at `0x5349be46935302f77acD6363D063efFE5DE27c42`. Per-category fees centralized in `apps/api/src/lib/marketFees.ts`. |
+| Cross-market arb visibility UI | ✅ done | `GET /arb-signals` endpoint + `/arb` page. Detects winner_vs_reach_final per-team violations + global winner-sum / reach-final-sum anomalies. |
+
+### v2 ports
+
+v1 (frozen for recording) uses 4000 + 3001. v2 uses **4001 + 3002** so both can run side-by-side.
+
+```
+v2 API   http://localhost:4001
+v2 Web   http://localhost:3002
+```
+
+### v2 on-chain (X Layer testnet, chain ID 1952)
+
+```
+XCupMarket  0x5349be46935302f77acD6363D063efFE5DE27c42   (deploy tx 0x15fa6160…05d923a)
+MockUSDC    0x6D0ecefecCE861B9353Ca353ccfb39a1537335e6   (deploy tx 0xda8aa9b6…f4798d31)
+Treasury    0xFaC819e2465C24529ad3684D61BFb442cC239d8E   (= deployer for now; admin can call setTreasury(<safe>) to migrate)
+```
+
+286 markets re-seeded on the new contract (same counts as v1, marketId starts back at 1).
+
+### v2 fee schedule (basis points, capped at 500 = 5%)
+
+```
+FIXTURE_1X2          180   (highest vig — easy market, deep liquidity)
+OVER_UNDER_25        160
+BTTS                 160
+FIRST_SCORER         140
+GROUP_WINNER         130
+TOURNAMENT_WINNER    120
+TO_REACH_FINAL       110
+PREDICTION_OPINION   100
+TOP_SCORER            90   (lowest vig — hardest call)
+```
+
+Live at `GET /admin/fee-schedule`. To change, edit `apps/api/src/lib/marketFees.ts` (per-category constants). To raise the cap, change `MAX_FEE_BPS` in the contract and redeploy.
+
+### Treasury hand-off plan
+
+The contract is live with treasury = deployer wallet. To migrate to a Safe:
+
+1. Create a Safe multisig on X Layer testnet (https://app.safe.global, network = X Layer Testnet 1952).
+2. From the deployer wallet, call `XCupMarket.setTreasury(<safe-address>)`. Emits `TreasurySet`.
+3. Confirm with `c.treasury()` view call.
+
+No re-deploy needed. setTreasury is admin-only and idempotent.
+
+---
+
 ## Current state — what's shipped (v1)
 
-Both v1 and v2 currently have IDENTICAL code (v2 just forked). Both are at commit `74b8584` ("Task #32 lineups + player profiles").
+v1 stays frozen at commit `74b8584` ("Task #32 lineups + player profiles") for demo recording.
 
 ### Built features
 
@@ -74,9 +131,9 @@ Explorer: https://www.oklink.com/x-layer-testnet
 
 ---
 
-## Pending v2 work
+## ~~Pending~~ COMPLETED v2 work (kept below for reference)
 
-**Do this in `~/x-cup-os-v2/`, NOT `~/x-cup-os/`.**
+**All three sections below are now shipped — keeping the original plan as a build log.**
 
 ### 1. Migrate to Railway Postgres (~30-60 min)
 
@@ -251,13 +308,13 @@ User's actual keys are in `apps/api/.env` on their local machine. **Never echo t
 ### Starting servers
 
 ```bash
-# Tab 1 — API
+# v1 (frozen, demo)
 cd ~/x-cup-os/apps/api && npm run dev      # port 4000
-# (for v2 work: cd ~/x-cup-os-v2/apps/api)
+cd ~/x-cup-os/apps/web && npm run dev      # port 3001
 
-# Tab 2 — Web
-cd ~/x-cup-os/apps/web && npm run dev      # port 3001 (3000 is SONAR's dev server)
-# (for v2 work: cd ~/x-cup-os-v2/apps/web)
+# v2 (post-submission work — different ports so both can run)
+cd ~/x-cup-os-v2/apps/api && npm run dev   # port 4001
+cd ~/x-cup-os-v2/apps/web && npm run dev   # port 3002
 ```
 
 ### Quick sanity checks

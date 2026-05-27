@@ -3,9 +3,10 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ethers } from "ethers";
-import { listTournamentMarkets, type TournamentMarketRecord } from "@/lib/api";
+import { listTournamentMarkets, type TournamentMarketRecord, type ArbWinnerVsRfSignal } from "@/lib/api";
 import { mockUsdc, signerProvider, xcupMarket } from "@/lib/contract";
 import { useWallet } from "./WalletProvider";
+import { ArbChip } from "./OutrightsHub";
 
 const EXPLORER = "https://www.oklink.com/x-layer-testnet";
 const DEFAULT_STAKE = "10";
@@ -19,7 +20,7 @@ type State =
   | { kind: "empty" }
   | { kind: "error"; message: string };
 
-export function TournamentMarketGrid() {
+export function TournamentMarketGrid({ arbViolations }: { arbViolations?: Map<number, ArbWinnerVsRfSignal> } = {}) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [sort, setSort] = useState<Sort>("pot");
 
@@ -98,7 +99,7 @@ export function TournamentMarketGrid() {
       {state.kind === "ready" && (
         <div className="tourney-grid">
           {sorted.map((m) => (
-            <TeamCard key={m.teamId} m={m} onAfterStake={refresh} />
+            <TeamCard key={m.teamId} m={m} onAfterStake={refresh} arbSignal={arbViolations?.get(m.teamId)} />
           ))}
         </div>
       )}
@@ -113,7 +114,15 @@ type StakeState =
   | { kind: "done"; txHash: string }
   | { kind: "error"; message: string };
 
-function TeamCard({ m, onAfterStake }: { m: TournamentMarketRecord; onAfterStake: () => void }) {
+function TeamCard({
+  m,
+  onAfterStake,
+  arbSignal,
+}: {
+  m: TournamentMarketRecord;
+  onAfterStake: () => void;
+  arbSignal?: ArbWinnerVsRfSignal;
+}) {
   const { state: walletState, connect } = useWallet();
   const [amount, setAmount] = useState(DEFAULT_STAKE);
   const [stake, setStake] = useState<StakeState>({ kind: "idle" });
@@ -247,6 +256,22 @@ function TeamCard({ m, onAfterStake }: { m: TournamentMarketRecord; onAfterStake
           <span style={{ color: "var(--success)" }}>YES {probPercent}%</span>
           <span style={{ color: "var(--text-3)" }}>{m.totalPotUsdc.toFixed(0)} USDC pool</span>
         </div>
+        {typeof m.feeBps === "number" && m.feeBps > 0 && (
+          <div
+            className="tourney-fee-tag"
+            title={`Protocol fee deducted from each winning claim on this market (${(m.feeBps / 100).toFixed(2)}%)`}
+            style={{
+              fontSize: 10,
+              color: "var(--text-3)",
+              marginTop: 4,
+              letterSpacing: 0.3,
+              textTransform: "uppercase",
+            }}
+          >
+            {(m.feeBps / 100).toFixed(2)}% fee
+          </div>
+        )}
+        {arbSignal && <ArbChip signal={arbSignal} side="winner" />}
       </div>
 
       {!m.settled && (
