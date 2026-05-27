@@ -376,6 +376,33 @@ export async function fetchH2H(teamAId: number, teamBId: number): Promise<H2HRes
   return { summary: json.summary, matches: json.matches };
 }
 
+/* ---- Odds comparison (API-Football model vs our pool) ---- */
+
+export interface OddsComparisonResult {
+  fixture: { id: number; home: string; away: string; outcomeCount: number; marketId: number };
+  model: {
+    home: number; // 0-1
+    draw: number;
+    away: number;
+    winner: string | null;
+    advice: string;
+  } | null;
+  pool: {
+    home: number;
+    draw: number;
+    away: number;
+    totalPotUsdc: number;
+  };
+  delta: { home: number; draw: number; away: number } | null;
+}
+
+export async function fetchOddsComparison(fixtureId: number): Promise<OddsComparisonResult> {
+  const res = await fetch(`${API_URL}/fixtures/${fixtureId}/odds-comparison`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error ?? "Failed to load odds comparison");
+  return json as OddsComparisonResult;
+}
+
 export async function listPredictionMarkets(): Promise<PredictionMarketView[]> {
   const res = await fetch(`${API_URL}/prediction-markets`);
   const json = await res.json();

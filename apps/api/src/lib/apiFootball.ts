@@ -238,6 +238,29 @@ export async function fetchTopScorers(): Promise<ApiTopScorerRow[]> {
   });
 }
 
+/**
+ * Predictions endpoint — API-Football's algorithmic forecast for a fixture.
+ * Free-tier compatible. Returns win probabilities, recommended advice, and
+ * historical h2h baseline.
+ *
+ * Shape of the response object we care about:
+ *   { winner: { name, comment }, percent: { home: "45%", draw: "45%", away: "10%" }, advice }
+ */
+export interface ApiPredictionRow {
+  winner: { id?: number; name?: string; comment?: string };
+  win_or_draw: boolean;
+  under_over: string | null;
+  goals: { home: string | null; away: string | null };
+  advice: string;
+  percent: { home: string; draw: string; away: string };
+}
+
+export async function fetchPredictions(fixtureId: number): Promise<ApiPredictionRow | null> {
+  const arr = await get<Array<{ predictions: ApiPredictionRow }>>("/predictions", { fixture: fixtureId });
+  if (!arr.length) return null;
+  return arr[0]!.predictions;
+}
+
 /** Account/quota status — useful for the dashboard or debugging. */
 export async function fetchAccountStatus(): Promise<{
   account: { firstname: string; lastname: string; email: string };

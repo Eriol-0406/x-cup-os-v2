@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
+import { ethers } from "ethers";
+import { XCupMarketAbi, getDeployment } from "@x-cup/abi";
 import { prisma } from "../db.js";
-import { fetchHeadToHead } from "../lib/apiFootball.js";
+import { env } from "../env.js";
+import { fetchHeadToHead, fetchPredictions } from "../lib/apiFootball.js";
 
 export const fixturesRouter = Router();
 
@@ -123,6 +126,84 @@ fixturesRouter.get("/:id", async (req, res) => {
   });
   if (!fixture) return res.status(404).json({ ok: false, error: "fixture not found" });
   return res.json({ ok: true, fixture: serializeFixture(fixture) });
+});
+
+/**
+ * GET /fixtures/:id/odds-comparison — model vs pool implied odds for a fixture.
+ *
+ * Returns the API-Football algorithmic prediction (home/draw/away %)
+ * alongside the implied probabilities derived from our on-chain pool's
+ * outcomePots. The delta column shows where the crowd's money disagrees
+ * with the model — a sharp bettor's edge signal.
+ */
+fixturesRouter.get("/:id/odds-comparison", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: "invalid id" });
+
+  const fixture = await prisma.fixture.findUnique({ where: { id }, include: { market: true } });
+  if (!fixture) return res.status(404).json({ ok: false, error: "fixture not found" });
+  if (!fixture.market) return res.status(404).json({ ok: false, error: "no on-chain market for this fixture" });
+
+  // 1. Model prediction (API-Football). Cached aggressively.
+  let model: { home: number; draw: number; away: number; winner: string | null; advice: string } | null = null;
+  try {
+    const pred = await fetchPredictions(id);
+    if (pred) {
+      const pct = (s: string) => parseInt(String(s).replace("%", ""), 10) / 100 || 0;
+      model = {
+        home: pct(pred.percent.home),
+        draw: pct(pred.percent.draw),
+        away: pct(pred.percent.away),
+        winner: pred.winner?.name ?? null,
+        advice: pred.advice ?? "",
+      };
+    }
+  } catch (err: any) {
+    // Predictions can be unavailable for some fixtures — degrade gracefully
+    console.warn(`[odds-comparison] no predictions for ${id}:`, err?.message ?? err);
+  }
+
+  // 2. Pool implied probabilities — read outcomePots from chain
+  const deployment = getDeployment(env.XLAYER_CHAIN_ID);
+  const provider = new ethers.JsonRpcProvider(deployment.rpc);
+  const market = new ethers.Contract(deployment.contracts.XCupMarket.address, XCupMarketAbi as any, provider) as any;
+  const oc = fixture.market.outcomeCount;
+  const pots: bigint[] = await Promise.all(
+    Array.from({ length: oc }, (_, i) => market.getOutcomePot(fixture.market!.marketId, i)),
+  );
+  const total = pots.reduce((a, b) => a + b, 0n);
+  const pool =
+    total > 0n
+      ? {
+          home: Number(pots[0]!) / Number(total),
+          draw: oc === 3 ? Number(pots[1]!) / Number(total) : 0,
+          away: oc === 3 ? Number(pots[2]!) / Number(total) : Number(pots[1]!) / Number(total),
+          totalPotUsdc: Number(ethers.formatUnits(total, 6)),
+        }
+      : { home: 0, draw: 0, away: 0, totalPotUsdc: 0 };
+
+  // 3. Delta (only meaningful when both sides have data)
+  const delta = model
+    ? {
+        home: pool.home - model.home,
+        draw: pool.draw - model.draw,
+        away: pool.away - model.away,
+      }
+    : null;
+
+  return res.json({
+    ok: true,
+    fixture: {
+      id: fixture.id,
+      home: fixture.homeTeamName,
+      away: fixture.awayTeamName,
+      outcomeCount: oc,
+      marketId: fixture.market.marketId,
+    },
+    model,
+    pool,
+    delta,
+  });
 });
 
 /** Get the distinct rounds available — useful for filter UI. */
