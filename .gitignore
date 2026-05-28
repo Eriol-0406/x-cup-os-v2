@@ -54,3 +54,9 @@ apps/api/prisma/dev.db-journal
 # misc
 coverage/
 .turbo/
+
+# private docs — kept out of public repo
+README.md
+DEMO.md
+HANDOFF.md
+CODE-WALKTHROUGH.md
