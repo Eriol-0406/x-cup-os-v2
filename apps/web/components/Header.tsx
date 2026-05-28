@@ -68,6 +68,25 @@ export function Header() {
 
   return (
     <header className="header">
+      {/* Testnet disclaimer — sits above the main header on every page.
+          Important once the site is public: agent burner keys are
+          server-encrypted (acceptable for testnet, not mainnet), and
+          all assets are mock USDC + testnet OKB. */}
+      <div
+        style={{
+          background: "rgba(255, 196, 0, 0.08)",
+          borderBottom: "1px solid rgba(255, 196, 0, 0.2)",
+          color: "#ffd66e",
+          fontSize: 11,
+          fontWeight: 500,
+          letterSpacing: 0.3,
+          padding: "6px 12px",
+          textAlign: "center",
+          textTransform: "uppercase",
+        }}
+      >
+        X Layer Testnet · Mock USDC · Never send mainnet funds to your agent wallet
+      </div>
       <div className="container header-inner">
         <div className="logo">
           <img src="/logo.png" alt="X-Cup Logo" style={{ width: 48, height: 48, borderRadius: '4px', objectFit: 'contain', margin: '0 8px' }} />
