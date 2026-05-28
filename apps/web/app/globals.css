@@ -1864,6 +1864,74 @@ a.bracket-match:hover {
   line-height: 1.5;
 }
 
+/* ---- Direct 1x2 betting on fixture cards ---- */
+.match-bet-panel {
+  margin: 10px 0 6px;
+  padding: 10px 12px;
+  background: rgba(91, 140, 255, 0.04);
+  border: 1px solid var(--accent-dim);
+  border-radius: 8px;
+}
+.match-bet-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.match-bet-btn {
+  flex: 1;
+  min-width: 64px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  color: var(--text-1);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, transform 0.12s ease;
+}
+.match-bet-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #5feaff;
+  box-shadow: 0 0 0 1px rgba(95, 234, 255, 0.25);
+}
+.match-bet-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.match-bet-home {
+  border-color: rgba(74, 222, 128, 0.4);
+  color: var(--success);
+}
+.match-bet-home:hover:not(:disabled) {
+  background: rgba(74, 222, 128, 0.08);
+}
+.match-bet-draw {
+  border-color: rgba(180, 180, 180, 0.3);
+  color: var(--text-2);
+}
+.match-bet-draw:hover:not(:disabled) {
+  background: rgba(180, 180, 180, 0.06);
+}
+.match-bet-away {
+  border-color: rgba(248, 113, 113, 0.4);
+  color: var(--error);
+}
+.match-bet-away:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.08);
+}
+.match-bet-status {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 /* ---- Knockout bracket (real fixtures, when available) ---- */
 .bracket-wrap {
   display: flex;

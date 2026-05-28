@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { ethers } from "ethers";
 import {
   listFixtures,
   listCachedTeams,
@@ -18,6 +19,8 @@ import { PlayerPropsPanel } from "./PlayerPropsPanel";
 import { H2HModal } from "./H2HModal";
 import { OddsComparisonPanel } from "./OddsComparisonPanel";
 import { LineupsPanel } from "./LineupsPanel";
+import { useWallet } from "./WalletProvider";
+import { mockUsdc, signerProvider, xcupMarket } from "@/lib/contract";
 
 const EXPLORER = "https://www.oklink.com/x-layer-testnet";
 
@@ -293,6 +296,20 @@ function FixtureCard({ f }: { f: FixtureRecord }) {
         </span>
       </div>
 
+      {/* Direct 1x2 betting — only shown when the fixture has an on-chain
+          market AND the match hasn't finished yet (no point betting after the
+          result is in). Stakes on outcome idx 0 (home), 1 (draw), 2 (away)
+          for 3-outcome group-stage markets, or idx 0/1 only for 2-outcome
+          knockouts. */}
+      {f.market && !done && (
+        <MatchBetPanel
+          marketId={f.market.marketId}
+          outcomeCount={f.market.outcomeCount}
+          homeName={f.home.name}
+          awayName={f.away.name}
+        />
+      )}
+
       <div className="prop-toggle-row">
         <button className="btn prop-toggle-btn" onClick={() => setH2hOpen(true)}>
           ⚔️ H2H History
@@ -371,4 +388,151 @@ function formatDateLine(iso: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * 1x2 betting panel — inline on every upcoming/live fixture card so users
+ * can stake on home / draw / away directly without leaving the Match page.
+ * Calls XCupMarket.stake(marketId, outcomeIdx, amount). Outcome indices:
+ *   3-outcome (group-stage): 0 = HOME, 1 = DRAW, 2 = AWAY
+ *   2-outcome (knockout):    0 = HOME, 1 = AWAY  (no draw)
+ * Approval is requested lazily when allowance < amount. Auto-resets after
+ * a successful tx so the user can chain bets.
+ * ──────────────────────────────────────────────────────────────────────── */
+type BetState =
+  | { kind: "idle" }
+  | { kind: "approving" }
+  | { kind: "sending" }
+  | { kind: "done"; outcomeIdx: number; txHash: string }
+  | { kind: "error"; message: string };
+
+function MatchBetPanel({
+  marketId,
+  outcomeCount,
+  homeName,
+  awayName,
+}: {
+  marketId: number;
+  outcomeCount: number;
+  homeName: string;
+  awayName: string;
+}) {
+  const { state: walletState, connect } = useWallet();
+  const [amount, setAmount] = useState("10");
+  const [bet, setBet] = useState<BetState>({ kind: "idle" });
+
+  const place = async (outcomeIdx: number) => {
+    if (walletState.kind !== "connected") {
+      void connect();
+      return;
+    }
+    const v = Number(amount);
+    if (!Number.isFinite(v) || v <= 0) {
+      setBet({ kind: "error", message: "Enter a positive amount" });
+      return;
+    }
+    try {
+      setBet({ kind: "approving" });
+      const signer = await signerProvider();
+      const usdc = mockUsdc(signer) as any;
+      const xcup = xcupMarket(signer) as any;
+      const stakeAmount = ethers.parseUnits(String(v), 6);
+      const allowance: bigint = await usdc.allowance(walletState.address, await xcup.getAddress());
+      if (allowance < stakeAmount) {
+        const tx = await usdc.approve(await xcup.getAddress(), ethers.MaxUint256);
+        await tx.wait();
+      }
+      setBet({ kind: "sending" });
+      const tx = await xcup.stake(marketId, outcomeIdx, stakeAmount);
+      await tx.wait();
+      setBet({ kind: "done", outcomeIdx, txHash: tx.hash });
+      // tell the rest of the page (activity dashboard etc.) that a stake landed
+      window.dispatchEvent(new CustomEvent("xcup:fixture-stake", { detail: { marketId } }));
+    } catch (err: any) {
+      const userRejected = err?.code === 4001 || /rejected|denied|user closed|user cancel/i.test(err?.message ?? "");
+      setBet({
+        kind: "error",
+        message: userRejected ? "Transaction rejected" : err?.shortMessage ?? err?.message ?? "Bet failed",
+      });
+    }
+  };
+
+  const busy = bet.kind === "approving" || bet.kind === "sending";
+  const outcomeLabel = (idx: number) => {
+    if (outcomeCount === 3) {
+      return idx === 0 ? "HOME" : idx === 1 ? "DRAW" : "AWAY";
+    }
+    return idx === 0 ? "HOME" : "AWAY";
+  };
+  const outcomeIdxs = outcomeCount === 3 ? [0, 1, 2] : [0, 1];
+
+  return (
+    <div className="match-bet-panel">
+      <div className="match-bet-row">
+        <input
+          type="number"
+          min="1"
+          step="1"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="strategy-input"
+          style={{ minHeight: 34, padding: "6px 10px", maxWidth: 90, fontSize: 13 }}
+          disabled={busy}
+        />
+        <span style={{ fontSize: 11, color: "var(--text-3)" }}>USDC →</span>
+        {outcomeIdxs.map((idx) => (
+          <button
+            key={idx}
+            className={`match-bet-btn match-bet-${outcomeLabel(idx).toLowerCase()}`}
+            onClick={() => place(idx)}
+            disabled={busy}
+            title={
+              idx === 0
+                ? `Bet ${amount} USDC on ${homeName} to win`
+                : outcomeCount === 3 && idx === 1
+                  ? `Bet ${amount} USDC on a draw`
+                  : `Bet ${amount} USDC on ${awayName} to win`
+            }
+          >
+            {outcomeLabel(idx)}
+          </button>
+        ))}
+      </div>
+      {bet.kind === "approving" && (
+        <div className="match-bet-status">
+          <span className="spinner" /> Approving USDC…
+        </div>
+      )}
+      {bet.kind === "sending" && (
+        <div className="match-bet-status">
+          <span className="spinner" /> Confirming on-chain…
+        </div>
+      )}
+      {bet.kind === "done" && (
+        <div className="match-bet-status" style={{ color: "var(--success)" }}>
+          ✓ Bet on {outcomeLabel(bet.outcomeIdx)} confirmed ·{" "}
+          <a href={`${EXPLORER}/tx/${bet.txHash}`} target="_blank" rel="noreferrer">tx ↗</a>
+          <button
+            className="tourney-cancel"
+            onClick={() => setBet({ kind: "idle" })}
+            style={{ marginLeft: 8 }}
+          >
+            place another
+          </button>
+        </div>
+      )}
+      {bet.kind === "error" && (
+        <div className="match-bet-status" style={{ color: "var(--error)" }}>
+          ✗ {bet.message}
+          <button
+            className="tourney-cancel"
+            onClick={() => setBet({ kind: "idle" })}
+            style={{ marginLeft: 8 }}
+          >
+            dismiss
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
