@@ -127,7 +127,7 @@ export async function createFirstScorerMarkets(opts: {
   ) as any;
 
   // Pick fixtures: finished, scope-filtered (explicit IDs > mode), not yet mapped.
-  const where: any = { status: { in: ["FT", "AET", "PEN"] } };
+  const where: any = { season: env.WC_SEASON, status: { in: ["FT", "AET", "PEN"] } };
   if (opts.fixtureIds && opts.fixtureIds.length > 0) {
     where.id = { in: opts.fixtureIds };
   } else if ((opts.mode ?? "knockout") === "knockout") {

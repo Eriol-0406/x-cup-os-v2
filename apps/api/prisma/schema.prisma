@@ -88,6 +88,7 @@ model Team {
 
 model Fixture {
   id              Int       @id              // API-Football fixture id
+  season          Int       @default(2022)   // env.WC_SEASON snapshot; 2022 = Qatar, 2026 = USA/Canada/Mexico
   date            DateTime
   status          String                     // NS | 1H | HT | 2H | ET | P | FT | AET | PEN | PST | CANC | ABD
   round           String                     // "Group Stage - 1", "Round of 16", "Final", etc
@@ -109,6 +110,7 @@ model Fixture {
   market          FixtureMarket?
   playerProps     PlayerPropMarket[]
 
+  @@index([season])
   @@index([status])
   @@index([date])
   @@index([round])

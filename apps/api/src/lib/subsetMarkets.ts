@@ -61,6 +61,7 @@ async function createPerFixtureBinary(
   feeBps: number,
 ): Promise<{ created: CreatedSubMarket[]; skipped: number; failed: number }> {
   const fixtures = await prisma.fixture.findMany({
+    where: { season: env.WC_SEASON },
     include: { playerProps: true },
     orderBy: { date: "asc" },
   });

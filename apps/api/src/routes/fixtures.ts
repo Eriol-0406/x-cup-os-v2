@@ -88,7 +88,10 @@ fixturesRouter.get("/", async (req, res) => {
   const q = ListQuery.safeParse(req.query);
   if (!q.success) return res.status(400).json({ ok: false, error: "invalid query", issues: q.error.flatten() });
 
-  const where: any = {};
+  // Default scope: the currently-configured WC season. Older seasons remain
+  // in the DB (Fixture rows persist across env flips) but are filtered out
+  // here so the UI shows one tournament at a time.
+  const where: any = { season: env.WC_SEASON };
   switch (q.data.status) {
     case "live":
       where.status = { in: ["1H", "HT", "2H", "ET", "P", "BT"] };
@@ -235,6 +238,7 @@ fixturesRouter.get("/:id/lineups", async (req, res) => {
 /** Get the distinct rounds available — useful for filter UI. */
 fixturesRouter.get("/_meta/rounds", async (_req, res) => {
   const rows = await prisma.fixture.findMany({
+    where: { season: env.WC_SEASON },
     distinct: ["round"],
     select: { round: true },
     orderBy: { round: "asc" },

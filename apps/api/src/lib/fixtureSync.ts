@@ -26,6 +26,7 @@ export async function syncFixtures(): Promise<{ fetched: number; upserted: numbe
       where: { id: f.fixture.id },
       create: {
         id: f.fixture.id,
+        season: env.WC_SEASON,
         date: new Date(f.fixture.date),
         status: f.fixture.status.short,
         round: f.league.round,
@@ -106,7 +107,7 @@ export async function createMissingMarkets(maxToCreate?: number): Promise<Create
   // window for the demo. When pointed at the live WC 2026 dataset, the
   // kickoff time would just be in the future and we'd use that directly.
   const unmapped = await prisma.fixture.findMany({
-    where: { market: null },
+    where: { season: env.WC_SEASON, market: null },
     orderBy: { date: "asc" },
     take: maxToCreate ?? 100,
   });

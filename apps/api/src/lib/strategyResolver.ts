@@ -1,5 +1,6 @@
 import type { ParsedStrategy } from "@x-cup/types";
 import { prisma } from "../db.js";
+import { env } from "../env.js";
 
 /**
  * Normalize a string for fuzzy match — lowercased, accents stripped, trimmed.
@@ -46,7 +47,7 @@ export async function resolveStrategyTargets(parsed: ParsedStrategy): Promise<nu
   // 1. Match-winner markets keyed by team mention
   if (teamMentions.size > 0) {
     const fixturesWithMarket = await prisma.fixture.findMany({
-      where: { market: { isNot: null } },
+      where: { season: env.WC_SEASON, market: { isNot: null } },
       include: { market: true },
     });
     for (const f of fixturesWithMarket) {
