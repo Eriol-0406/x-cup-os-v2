@@ -81,15 +81,39 @@ function buildFirstScorerOutcomes(scorers: { player: string; team: string }[]): 
 }
 
 /**
+ * Round names that API-Football uses for knockout-stage fixtures. The set is
+ * stable across World Cup editions (2018, 2022, 2026 all share these names),
+ * so we treat anything NOT in the "Group Stage - N" pattern as knockout.
+ *
+ * Kept as a named constant so it's grep-able when the round naming changes
+ * for a different competition (e.g. Euros use "Final 1/8" naming).
+ */
+export const KNOCKOUT_ROUNDS = [
+  "Round of 16",
+  "Quarter-finals",
+  "Semi-finals",
+  "3rd Place Final",
+  "Final",
+] as const;
+
+/**
  * Pull events for a single fixture (1 API call) and create the first-scorer
  * market on-chain + persist the mapping. Idempotent — skips fixtures that
  * already have a first_scorer PlayerPropMarket.
  *
- * fixtureIds: optional whitelist (e.g. just knockouts). If empty, processes
- * every finished fixture that doesn't already have a market.
+ * fixtureIds — optional explicit whitelist. If provided AND non-empty, it
+ *              takes precedence over `mode`.
+ * mode       — auto-discovery strategy when fixtureIds is omitted:
+ *                "knockout" (default): only R16 / QF / SF / Final / 3rd-place
+ *                "all":                every finished fixture
+ *              First-scorer markets are typically only worth running on
+ *              knockouts (group-stage matches see less concentrated betting
+ *              interest + use more API quota), so "knockout" is the default.
+ * limit      — soft cap (default 30) — protects against runaway runs.
  */
 export async function createFirstScorerMarkets(opts: {
   fixtureIds?: number[];
+  mode?: "knockout" | "all";
   limit?: number;
 }): Promise<{ created: CreatedPropMarket[]; skipped: number; failed: number }> {
   if (!env.DEPLOYER_PRIVATE_KEY) throw new Error("DEPLOYER_PRIVATE_KEY not set");
@@ -102,9 +126,13 @@ export async function createFirstScorerMarkets(opts: {
     admin,
   ) as any;
 
-  // Pick fixtures: finished, optionally filtered, and not yet mapped.
+  // Pick fixtures: finished, scope-filtered (explicit IDs > mode), not yet mapped.
   const where: any = { status: { in: ["FT", "AET", "PEN"] } };
-  if (opts.fixtureIds && opts.fixtureIds.length > 0) where.id = { in: opts.fixtureIds };
+  if (opts.fixtureIds && opts.fixtureIds.length > 0) {
+    where.id = { in: opts.fixtureIds };
+  } else if ((opts.mode ?? "knockout") === "knockout") {
+    where.round = { in: [...KNOCKOUT_ROUNDS] };
+  }
   const fixtures = await prisma.fixture.findMany({
     where,
     take: opts.limit ?? 30,

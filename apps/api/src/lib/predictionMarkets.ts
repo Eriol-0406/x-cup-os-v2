@@ -97,38 +97,64 @@ export async function createPredictionMarket(input: CreatePredictionInput): Prom
   };
 }
 
-/** Default seed for WC 2022 — five canonical opinion questions. */
-export const DEFAULT_PREDICTION_SEEDS: CreatePredictionInput[] = [
-  {
-    slug: "unbeaten-champion-2022",
-    question: "Will an unbeaten champion emerge from WC 2022?",
-    category: "Tournament",
-  },
-  {
-    slug: "top-scorer-5plus-2022",
-    question: "Will the WC 2022 Golden Boot winner score 5 or more goals?",
-    category: "Player",
-  },
-  {
-    slug: "host-reaches-r16-2022",
-    question: "Will the host nation (Qatar) reach the Round of 16?",
-    category: "Tournament",
-  },
-  {
-    slug: "european-golden-boot-2022",
-    question: "Will the WC 2022 Golden Boot winner be from a European nation?",
-    category: "Player",
-  },
-  {
-    slug: "underdog-semifinal-2022",
-    question: "Will a non-top-10 FIFA-ranked team reach the semi-finals?",
-    category: "Special",
-  },
-];
+/**
+ * Per-season facts used to render default prediction questions.
+ *   - host: the human-readable host nation phrase (a single country for
+ *           single-host editions, a list for co-hosted ones).
+ *
+ * When you switch WC_SEASON to a new edition, add a row here. Falls back to
+ * the generic "host nation" phrasing if the season isn't listed.
+ */
+const SEASON_FACTS: Record<number, { host: string }> = {
+  2018: { host: "Russia" },
+  2022: { host: "Qatar" },
+  2026: { host: "the USA, Canada, or Mexico" },
+};
+
+/**
+ * Default seed for the configured WC season — five canonical opinion questions.
+ * Slugs include the season so different editions can coexist in the DB
+ * (`unbeaten-champion-2022`, `unbeaten-champion-2026`, …). All text is
+ * templated from `env.WC_SEASON` so flipping seasons is a one-env change.
+ */
+export function defaultPredictionSeeds(season: number = env.WC_SEASON): CreatePredictionInput[] {
+  const host = SEASON_FACTS[season]?.host ?? "the host nation";
+  return [
+    {
+      slug: `unbeaten-champion-${season}`,
+      question: `Will an unbeaten champion emerge from WC ${season}?`,
+      category: "Tournament",
+    },
+    {
+      slug: `top-scorer-5plus-${season}`,
+      question: `Will the WC ${season} Golden Boot winner score 5 or more goals?`,
+      category: "Player",
+    },
+    {
+      slug: `host-reaches-r16-${season}`,
+      question: `Will ${host} reach the Round of 16?`,
+      category: "Tournament",
+    },
+    {
+      slug: `european-golden-boot-${season}`,
+      question: `Will the WC ${season} Golden Boot winner be from a European nation?`,
+      category: "Player",
+    },
+    {
+      slug: `underdog-semifinal-${season}`,
+      question: `Will a non-top-10 FIFA-ranked team reach the WC ${season} semi-finals?`,
+      category: "Special",
+    },
+  ];
+}
+
+/** Back-compat export — resolves at import time using the current env. */
+export const DEFAULT_PREDICTION_SEEDS: CreatePredictionInput[] = defaultPredictionSeeds();
 
 export async function seedDefaultPredictions(): Promise<CreatedPredictionMarket[]> {
   const results: CreatedPredictionMarket[] = [];
-  for (const seed of DEFAULT_PREDICTION_SEEDS) {
+  // Re-derive at call time so a runtime env change is picked up without a restart.
+  for (const seed of defaultPredictionSeeds()) {
     try {
       results.push(await createPredictionMarket(seed));
     } catch (err: any) {

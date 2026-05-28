@@ -150,7 +150,7 @@ User has a paid Railway subscription. Steps:
    - `POST /admin/seed-bookmaker-markets` — creates all 169 sub-markets (~5 min, 169 on-chain txs)
    - `POST /admin/seed-predictions` — creates 5 prediction markets
    - `POST /admin/cache-teams` — populates Team table with group letters
-   - `POST /admin/create-first-scorer-markets` with `{"fixtureIds":[976533,976642,...]}` (knockout fixture IDs)
+   - `POST /admin/create-first-scorer-markets` with `{}` — auto-discovers knockout fixtures (R16 + QF + SF + Final + 3rd-place) from the DB. Pass `{"mode":"all"}` to include group stage. Pass `{"fixtureIds":[...]}` to override.
 
 **Note on schema.prisma:** SQLite uses `String` for JSON arrays (we manually JSON.stringify/parse). Postgres has a native `Json` type — could migrate to that for cleanliness but the existing String-with-JSON-inside works too. Leave as String to minimize migration churn.
 

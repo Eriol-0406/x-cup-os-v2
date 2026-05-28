@@ -258,7 +258,8 @@ adminRouter.post("/replay-fixture/:id", async (req, res) => {
 
 const FirstScorerSchema = z.object({
   fixtureIds: z.array(z.number().int().positive()).optional(),
-  limit: z.number().int().positive().max(30).optional(),
+  mode: z.enum(["knockout", "all"]).optional(),
+  limit: z.number().int().positive().max(64).optional(),
 });
 
 /**
@@ -269,12 +270,15 @@ const FirstScorerSchema = z.object({
  * API-Football and creates an on-chain market with one outcome per distinct
  * scorer (cap 7) plus "Other / no scorer".
  *
- * Body: { fixtureIds?: [int], limit?: int }
- *   - fixtureIds: only create markets for these fixtures (recommended for
- *     quota — e.g. just the knockout matches)
+ * Body: { fixtureIds?: [int], mode?: "knockout"|"all", limit?: int }
+ *   - fixtureIds: only create markets for these fixtures (overrides `mode`)
+ *   - mode: when fixtureIds is omitted — "knockout" (default, R16+QF+SF+Final
+ *           +3rd-place) or "all" (every finished fixture)
  *   - limit: cap how many fixtures to process (default 30)
  *
  * Costs ~1 API request per fixture processed. Watch /admin/api-status budget.
+ * Calling with an empty body `{}` auto-discovers knockout fixtures from the DB
+ * — no hardcoded IDs.
  */
 adminRouter.post("/create-first-scorer-markets", async (req, res) => {
   const body = FirstScorerSchema.safeParse(req.body ?? {});

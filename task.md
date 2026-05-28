@@ -184,8 +184,10 @@ curl -X POST http://localhost:4001/admin/create-markets -H 'Content-Type: applic
 curl -X POST http://localhost:4001/admin/create-tournament-markets | jq
 curl -X POST http://localhost:4001/admin/seed-bookmaker-markets | jq
 curl -X POST http://localhost:4001/admin/seed-predictions | jq
-curl -X POST http://localhost:4001/admin/create-first-scorer-markets -H 'Content-Type: application/json' \
-  -d '{"fixtureIds":[976533,976642,976643,976534,977344,977705,977345,977706,978072,977794,978088,978036,978279,978488,979138,979139]}' | jq
+# Auto-discovers knockout fixtures from the DB (R16 + QF + SF + Final + 3rd-place)
+# — works for any World Cup edition without hardcoding fixture IDs.
+curl -X POST http://localhost:4001/admin/create-first-scorer-markets \
+  -H 'Content-Type: application/json' -d '{}' | jq
 
 # View fee schedule + API quota
 curl http://localhost:4001/admin/fee-schedule | jq
