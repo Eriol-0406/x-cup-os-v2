@@ -12,7 +12,7 @@ This is the recording script for a 3-minute demo video against the public deploy
 
 - [ ] Browser at `https://x-cup-os-v2.vercel.app` in a clean incognito window (fresh first-connect experience for the welcome modal demo)
 - [ ] OKX Wallet extension installed, X Layer testnet network added (chain 1952)
-- [ ] At least 0.05 OKB in your main wallet (faucet: https://www.okx.com/x-layer/faucet)
+- [ ] At least 0.05 OKB in your main wallet (faucet: https://web3.okx.com/xlayer/faucet/xlayerfaucet)
 - [ ] Browser DevTools closed, zoom at 100%, tab pinned to the URL
 - [ ] Disable browser notifications + Slack/Discord — no popups during recording
 - [ ] Have this script open on a second screen / phone for prompts

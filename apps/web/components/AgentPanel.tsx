@@ -280,7 +280,7 @@ export function AgentPanel() {
               <span style={{ fontSize: 11, color: "var(--text-3)", marginLeft: "auto" }}>
                 Need testnet OKB?{" "}
                 <a
-                  href="https://www.okx.com/x-layer/faucet"
+                  href="https://web3.okx.com/xlayer/faucet/xlayerfaucet"
                   target="_blank"
                   rel="noreferrer"
                   style={{ color: "var(--accent)" }}
