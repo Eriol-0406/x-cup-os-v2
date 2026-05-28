@@ -13,16 +13,34 @@ export default function HomePage() {
 
       <main className="container" style={{ flex: 1 }}>
         <section className="hero">
-          <div className="kicker">
-            <span className="kicker-dot" />
-            Live on X Layer testnet · World Cup 2022 (historical replay)
+          <div className="hero-grid">
+            <div className="hero-text">
+              <div className="kicker">
+                <span className="kicker-dot" />
+                Live on X Layer testnet · powered by Llama 3.3 + Groq
+              </div>
+              <h1>
+                Bet on football.
+                <br />
+                Without ever clicking <span style={{ fontStyle: "italic" }}>"place bet"</span>.
+              </h1>
+              <p>
+                Write a strategy in plain English. Deploy an AI agent. It watches every match, reads live data, and places
+                bets on-chain when your conditions hit. You sleep, your agent trades.
+              </p>
+            </div>
+            <div className="hero-trophy-wrap" aria-hidden="true">
+              <video
+                src="/trophy-hero.mp4"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+              />
+            </div>
           </div>
-          <h1>Bet on football. Without ever clicking "place bet".</h1>
-          <p>
-            Write a strategy in plain English. Deploy an AI agent. It watches every match, reads live data, and places
-            bets on-chain when your conditions hit. You sleep, your agent trades.
-          </p>
-          <div className="hero-nav-row">
+          <div className="hero-nav-row" style={{ marginTop: 40 }}>
             <Link href="/match" className="hero-nav-card">
               <span className="hero-nav-emoji">⚽</span>
               <span className="hero-nav-title">Match</span>
