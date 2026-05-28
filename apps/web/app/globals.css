@@ -67,8 +67,35 @@ button {
   text-transform: uppercase;
   position: sticky;
   top: 0;
-  z-index: 11; /* above the nav header */
+  z-index: 12; /* above the brand strip and nav header */
   backdrop-filter: blur(8px);
+}
+
+/* ---- Brand breadcrumb strip (sticks between testnet banner and nav) ---- */
+.brand-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(8, 9, 12, 0.85);
+  border-bottom: 1px solid var(--border);
+  color: #5feaff;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, "Roboto Mono", Consolas, monospace;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  padding: 6px 12px;
+  text-transform: uppercase;
+  position: sticky;
+  top: 28px; /* directly below the testnet banner */
+  z-index: 11;
+  backdrop-filter: blur(8px);
+  text-shadow: 0 0 8px rgba(95, 234, 255, 0.4);
+}
+.brand-strip-pipe {
+  color: var(--text-3);
+  opacity: 0.6;
+  text-shadow: none;
 }
 
 /* ---- Header ---- */
@@ -78,7 +105,7 @@ button {
   background: rgba(8, 9, 12, 0.85);
   backdrop-filter: blur(8px);
   position: sticky;
-  top: 28px; /* sit directly below the testnet banner (banner is ~28px tall) */
+  top: 56px; /* sit below testnet banner (~28px) + brand strip (~28px) */
   z-index: 10;
 }
 /* Header spans the FULL viewport — logo flush left, wallet flush right.
@@ -320,6 +347,29 @@ button {
   object-fit: contain;
   filter: drop-shadow(0 0 24px rgba(91, 140, 255, 0.5));
   mix-blend-mode: lighten; /* keeps the cyan wireframe on dark bg without showing black around it */
+}
+
+/* Section eyebrow — striking page-header tag used on /match, /outrights,
+   /predictions, /specials, /bracket, /standings page titles. Cyan glow,
+   monospace, uppercase — visible from across the room. */
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, "Roboto Mono", Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #5feaff;
+  text-shadow: 0 0 12px rgba(95, 234, 255, 0.45);
+  margin-bottom: 14px;
+}
+.section-eyebrow::before {
+  content: "≋";
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.85;
 }
 
 /* Kicker — small monospace techy chip */
@@ -1467,14 +1517,39 @@ a.bracket-match:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   text-decoration: none;
-  transition: all 0.15s;
+  transition: all 0.18s ease;
   color: var(--text-1);
+  position: relative;
+  overflow: hidden;
+}
+.hero-nav-card::before {
+  /* Faint diagonal sheen that flashes across on hover — extra polish */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(95, 234, 255, 0) 40%,
+    rgba(95, 234, 255, 0.08) 50%,
+    rgba(95, 234, 255, 0) 60%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
 }
 .hero-nav-card:hover {
-  border-color: var(--accent-dim);
+  border-color: #5feaff;
   background: var(--bg-2);
   text-decoration: none;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(95, 234, 255, 0.3),
+    0 8px 32px rgba(95, 234, 255, 0.12);
+}
+.hero-nav-card:hover::before {
+  transform: translateX(100%);
 }
 .hero-nav-emoji { font-size: 22px; line-height: 1; }
 .hero-nav-title { font-size: 14px; font-weight: 700; color: var(--text-1); }

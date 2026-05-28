@@ -7,16 +7,14 @@ export default function BracketPage() {
       <Header />
       <main className="container" style={{ flex: 1 }}>
         <section style={{ padding: "32px 0 16px" }}>
-          <div className="kicker">
-            <span className="kicker-dot" />
-            Round of 16 → Final
-          </div>
-          <h1 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 8px", letterSpacing: "-0.03em" }}>
-            Knockout Bracket
+          <div className="section-eyebrow">Knockout Phase · R32 → Final</div>
+          <h1 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 8px", letterSpacing: "-0.03em" }}>
+            Tournament Bracket
           </h1>
           <p style={{ color: "var(--text-2)", maxWidth: 700, margin: 0, fontSize: 15 }}>
-            Visual WC 2022 knockout tree. 16 matches across R16, QF, SF, and Final. Each match is an on-chain market
-            you can stake on (head to the Match page to bet).
+            FIFA's official WC 2026 bracket structure with seed labels (1A, 2B, 3CDEF). Slots
+            fill in as the group stage concludes. Each match becomes a bettable on-chain market
+            on the <a href="/match">Match page</a> once teams qualify.
           </p>
         </section>
         <KnockoutBracket />

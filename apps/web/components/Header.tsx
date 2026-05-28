@@ -75,6 +75,16 @@ export function Header() {
       <div className="testnet-banner">
         X Layer Testnet · Mock USDC · Never send mainnet funds to your agent wallet
       </div>
+      {/* Brand breadcrumb strip — three-part chip identifying tournament + chain.
+          Matches the ZK-VAR / Polymarket-style 'context bar' that anchors every
+          page with what tournament + what chain you're on. */}
+      <div className="brand-strip">
+        <span>X-CUP</span>
+        <span className="brand-strip-pipe">|</span>
+        <span>WORLD CUP 2026 MARKETS</span>
+        <span className="brand-strip-pipe">|</span>
+        <span>X LAYER TESTNET</span>
+      </div>
     <header className="header">
       <div className="container header-inner">
         <div className="logo">

@@ -7,12 +7,9 @@ export default function MatchPage() {
       <Header />
       <main className="container" style={{ flex: 1 }}>
         <section style={{ padding: "32px 0 16px" }}>
-          <div className="kicker">
-            <span className="kicker-dot" />
-            1x2 — Home / Draw / Away
-          </div>
-          <h1 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 8px", letterSpacing: "-0.03em" }}>
-            Per-Match Prediction Markets
+          <div className="section-eyebrow">Per-Match Markets · 1x2 Home / Draw / Away</div>
+          <h1 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 8px", letterSpacing: "-0.03em" }}>
+            Match Prediction Markets
           </h1>
           <p style={{ color: "var(--text-2)", maxWidth: 700, margin: 0, fontSize: 15 }}>
             One on-chain parimutuel market per fixture. 64 WC 2022 matches synced from API-Football. Click "Replay this
