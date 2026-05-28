@@ -8,82 +8,6 @@ import { listFixtures, fetchStandings, type FixtureRecord, type StandingsTeam } 
 const ROUND_ORDER = ["Round of 16", "Quarter-finals", "Semi-finals", "Final"] as const;
 type Round = (typeof ROUND_ORDER)[number];
 
-/**
- * Structural bracket for WC 2026 — used when no actual knockout fixtures
- * have been published by API-Football yet. Shows the shape of the tournament
- * (R32 → R16 → QF → SF → Final + 3rd) with placeholder team labels so users
- * can see what's coming. Real fixtures replace this view as they're synced.
- *
- * Group labels (1A, 2B, etc.) follow the standard "1st of Group A" /
- * "2nd of Group B" notation. Best-3rd-placed seeds (3ABCDF style) are
- * intentionally generic — exact FIFA pairings are announced after group
- * stage closes.
- */
-type BracketMatchStub = {
-  matchNum: number;
-  dateLabel: string;
-  leftLabel: string;
-  rightLabel: string;
-};
-type BracketStructure = {
-  round: string;
-  matches: BracketMatchStub[];
-};
-const WC2026_STRUCTURE: BracketStructure[] = [
-  {
-    round: "Round of 32",
-    matches: [
-      { matchNum: 73, dateLabel: "Jun 30, 12:00", leftLabel: "1A", rightLabel: "3CDEF" },
-      { matchNum: 74, dateLabel: "Jun 30, 16:00", leftLabel: "1B", rightLabel: "2F" },
-      { matchNum: 75, dateLabel: "Jun 30, 20:00", leftLabel: "1C", rightLabel: "2E" },
-      { matchNum: 76, dateLabel: "Jul 1, 12:00",  leftLabel: "1D", rightLabel: "3BEFI" },
-      { matchNum: 77, dateLabel: "Jul 1, 16:00",  leftLabel: "1E", rightLabel: "3ABCDF" },
-      { matchNum: 78, dateLabel: "Jul 1, 20:00",  leftLabel: "1F", rightLabel: "2C" },
-      { matchNum: 79, dateLabel: "Jul 2, 12:00",  leftLabel: "1G", rightLabel: "3ABEHJ" },
-      { matchNum: 80, dateLabel: "Jul 2, 16:00",  leftLabel: "1H", rightLabel: "2J" },
-      { matchNum: 81, dateLabel: "Jul 2, 20:00",  leftLabel: "1I", rightLabel: "3CDFGH" },
-      { matchNum: 82, dateLabel: "Jul 3, 12:00",  leftLabel: "1J", rightLabel: "2L" },
-      { matchNum: 83, dateLabel: "Jul 3, 16:00",  leftLabel: "1K", rightLabel: "2A" },
-      { matchNum: 84, dateLabel: "Jul 3, 20:00",  leftLabel: "1L", rightLabel: "2B" },
-      { matchNum: 85, dateLabel: "Jul 4, 12:00",  leftLabel: "2D", rightLabel: "2G" },
-      { matchNum: 86, dateLabel: "Jul 4, 16:00",  leftLabel: "2H", rightLabel: "2I" },
-      { matchNum: 87, dateLabel: "Jul 4, 20:00",  leftLabel: "2K", rightLabel: "3GHIJK" },
-      { matchNum: 88, dateLabel: "Jul 5, 12:00",  leftLabel: "3EFHIJ", rightLabel: "3DGHIK" },
-    ],
-  },
-  {
-    round: "Round of 16",
-    matches: Array.from({ length: 8 }, (_, i) => ({
-      matchNum: 89 + i,
-      dateLabel: `Jul ${7 + Math.floor(i / 2)}, ${i % 2 === 0 ? "16:00" : "20:00"}`,
-      leftLabel: `W${73 + i * 2}`,
-      rightLabel: `W${74 + i * 2}`,
-    })),
-  },
-  {
-    round: "Quarter-finals",
-    matches: Array.from({ length: 4 }, (_, i) => ({
-      matchNum: 97 + i,
-      dateLabel: `Jul ${11 + Math.floor(i / 2)}, ${i % 2 === 0 ? "16:00" : "20:00"}`,
-      leftLabel: `W${89 + i * 2}`,
-      rightLabel: `W${90 + i * 2}`,
-    })),
-  },
-  {
-    round: "Semi-finals",
-    matches: [
-      { matchNum: 101, dateLabel: "Jul 14, 20:00", leftLabel: "W97", rightLabel: "W98" },
-      { matchNum: 102, dateLabel: "Jul 15, 20:00", leftLabel: "W99", rightLabel: "W100" },
-    ],
-  },
-  {
-    round: "3rd Place + Final",
-    matches: [
-      { matchNum: 103, dateLabel: "Jul 18, 16:00", leftLabel: "L101", rightLabel: "L102" },
-      { matchNum: 104, dateLabel: "Jul 19, 16:00", leftLabel: "W101", rightLabel: "W102" },
-    ],
-  },
-];
 
 export function KnockoutBracket() {
   const [fixtures, setFixtures] = useState<FixtureRecord[]>([]);
@@ -194,7 +118,26 @@ export function KnockoutBracket() {
         </div>
 
         {fixtures.length === 0 ? (
-          <StructuralBracket />
+          <div
+            className="card"
+            style={{
+              padding: 32,
+              textAlign: "center",
+              border: "1px dashed var(--border)",
+            }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🏟️</div>
+            <strong style={{ fontSize: 15 }}>Knockout bracket not finalized yet</strong>
+            <p style={{ color: "var(--text-3)", fontSize: 13, margin: "8px auto 0", maxWidth: 480, lineHeight: 1.5 }}>
+              FIFA hasn't published the knockout pairings yet — they depend on the group-stage
+              results. Once API-Football syncs the R16 / QF / SF / Final fixtures, matches will
+              appear here automatically.
+            </p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
+              <Link href="/match" className="btn">View group-stage fixtures →</Link>
+              <Link href="/outrights" className="btn">Bet on Tournament Winner →</Link>
+            </div>
+          </div>
         ) : (
           <div className="bracket-wrap">
             {byRound.map((round, idx) => (
@@ -270,71 +213,3 @@ function BracketMatch({ f }: { f: FixtureRecord }) {
   );
 }
 
-/**
- * Renders the WC 2026 tournament structure with placeholder labels (1A, 2B,
- * W74, etc.) — used as the empty-state fallback when no actual knockout
- * fixtures are in the DB yet. Shows the *shape* of the bracket and
- * estimated dates so users can see what's coming.
- */
-function StructuralBracket() {
-  return (
-    <>
-      <div
-        style={{
-          fontSize: 11,
-          fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-          color: "var(--text-3)",
-          marginBottom: 16,
-          letterSpacing: 0.4,
-          textTransform: "uppercase",
-        }}
-      >
-        ⓘ Tournament structure preview · pairings update as group stage concludes
-      </div>
-      <div className="structural-bracket">
-        {WC2026_STRUCTURE.map((col) => (
-          <div key={col.round} className="structural-bracket-column">
-            <div className="structural-bracket-round-title">{col.round}</div>
-            <div className="structural-bracket-matches">
-              {col.matches.map((m) => (
-                <div key={m.matchNum} className="structural-bracket-card">
-                  <div className="structural-bracket-card-head">
-                    <span>{m.dateLabel}</span>
-                    <span className="structural-bracket-card-num">M{m.matchNum}</span>
-                  </div>
-                  <div className="structural-bracket-row">
-                    <span className="structural-bracket-avatar" />
-                    <span className="structural-bracket-team">{m.leftLabel}</span>
-                  </div>
-                  <div className="structural-bracket-row">
-                    <span className="structural-bracket-avatar" />
-                    <span className="structural-bracket-team">{m.rightLabel}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div
-        style={{
-          marginTop: 24,
-          padding: 16,
-          background: "rgba(91, 140, 255, 0.06)",
-          border: "1px solid var(--accent-dim)",
-          borderRadius: 8,
-          fontSize: 13,
-          color: "var(--text-2)",
-          lineHeight: 1.5,
-        }}
-      >
-        <strong style={{ color: "var(--accent)" }}>Want to bet now?</strong> The
-        per-team <Link href="/outrights">Tournament Winner</Link> and{" "}
-        <Link href="/outrights">To Reach Final</Link> outrights are already live —
-        place positions on Argentina, France, Brazil, etc. without waiting for the
-        bracket to fill in. Once knockouts are announced, individual match markets
-        will appear on the <Link href="/match">Match page</Link>.
-      </div>
-    </>
-  );
-}

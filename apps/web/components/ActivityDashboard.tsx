@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useWallet } from "./WalletProvider";
-import { listFiresByWallet, type FireRecord } from "@/lib/api";
+import { listFiresByWallet, listStrategies, type FireRecord, type StrategyRecord } from "@/lib/api";
 
 const EXPLORER = "https://www.oklink.com/x-layer-testnet";
 
 type State =
   | { kind: "noWallet" }
   | { kind: "loading" }
-  | { kind: "ready"; fires: FireRecord[] }
+  | { kind: "ready"; fires: FireRecord[]; strategies: StrategyRecord[] }
   | { kind: "error"; message: string };
 
 export function ActivityDashboard() {
@@ -22,8 +23,13 @@ export function ActivityDashboard() {
       return;
     }
     try {
-      const fires = await listFiresByWallet(walletState.address);
-      setState({ kind: "ready", fires });
+      // Fetch fires + strategies in parallel so the empty state can show how
+      // many active strategies are armed even when no fires have happened.
+      const [fires, strategies] = await Promise.all([
+        listFiresByWallet(walletState.address),
+        listStrategies(walletState.address),
+      ]);
+      setState({ kind: "ready", fires, strategies });
     } catch (err: any) {
       setState({ kind: "error", message: err?.message ?? "Failed to load fires" });
     }
@@ -83,11 +89,37 @@ export function ActivityDashboard() {
         <div className="panel">
           <div className="preview-empty">
             <div style={{ fontSize: 28, marginBottom: 8 }}>📡</div>
-            <div>No agent activity yet.</div>
-            <div style={{ fontSize: 12, marginTop: 6, color: "var(--text-3)" }}>
-              Deploy a strategy above — when a trigger condition hits, the agent fires automatically and the tx
-              appears here.
-            </div>
+            {state.strategies.filter((s) => s.status === "active").length > 0 ? (
+              <>
+                <div>
+                  <strong style={{ color: "var(--text-1)" }}>
+                    {state.strategies.filter((s) => s.status === "active").length} active strateg
+                    {state.strategies.filter((s) => s.status === "active").length === 1 ? "y" : "ies"}
+                  </strong>{" "}
+                  armed · 0 fires so far
+                </div>
+                <div style={{ fontSize: 12, marginTop: 8, color: "var(--text-3)", maxWidth: 480, margin: "8px auto 0", lineHeight: 1.5 }}>
+                  Your agent is watching for trigger conditions. Fires happen when a match event
+                  matches your strategy — every WC 2026 fixture is still scheduled, so no events
+                  have triggered yet. Once matches finish (or via{" "}
+                  <code style={{ fontSize: 11, color: "var(--text-2)" }}>POST /admin/replay-fixture</code> on
+                  past WC 2022 data), tx hashes show up here.
+                </div>
+                <div style={{ marginTop: 14, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                  <Link href="/leaderboard" className="btn" style={{ fontSize: 12 }}>
+                    See your strategies on the leaderboard →
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>No agent activity yet.</div>
+                <div style={{ fontSize: 12, marginTop: 6, color: "var(--text-3)" }}>
+                  Deploy a strategy above — when a trigger condition hits, the agent fires
+                  automatically and the tx appears here.
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
