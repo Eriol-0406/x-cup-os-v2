@@ -238,35 +238,49 @@ button {
 }
 @media (max-width: 960px) { .hero p { margin: 0 auto 32px; } }
 
-/* Animated dot-grid + horizon glow ambient backdrop, lives behind the hero */
+/* Animated dot-grid + horizon glow ambient backdrop, lives behind the hero.
+   The dots drift diagonally; a secondary radial sweep moves vertically so
+   the motion is unmistakable instead of subliminal. */
 .hero::before {
   content: "";
   position: absolute;
   inset: -64px -32px -32px -32px;
   z-index: -2;
   background-image:
-    radial-gradient(rgba(91, 140, 255, 0.18) 1px, transparent 1px),
-    radial-gradient(rgba(91, 140, 255, 0.10) 1px, transparent 1px);
+    radial-gradient(rgba(91, 140, 255, 0.28) 1px, transparent 1px),
+    radial-gradient(rgba(91, 140, 255, 0.16) 1px, transparent 1px);
   background-size: 32px 32px, 64px 64px;
   background-position: 0 0, 16px 16px;
-  mask-image: radial-gradient(ellipse at center, #000 0%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, transparent 75%);
-  animation: hero-drift 28s linear infinite;
+  mask-image: radial-gradient(ellipse at center, #000 0%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, transparent 78%);
+  animation: hero-drift 12s linear infinite;
 }
 @keyframes hero-drift {
   from { background-position: 0 0, 16px 16px; }
   to   { background-position: 64px 64px, 80px 80px; }
 }
+/* Sweeping radial glow that travels left → right behind the hero. Makes
+   the page feel alive without competing with the trophy or the text. */
 .hero::after {
   content: "";
   position: absolute;
-  bottom: -32px;
-  left: -32px;
-  right: -32px;
-  height: 280px;
+  inset: -64px -32px -32px -32px;
   z-index: -1;
-  background: radial-gradient(ellipse at 50% 100%, rgba(91, 140, 255, 0.22) 0%, transparent 60%);
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(91, 140, 255, 0.25) 0%, transparent 55%),
+    radial-gradient(circle at var(--sweep-x, 50%) 50%, rgba(91, 140, 255, 0.18) 0%, transparent 18%);
   pointer-events: none;
+  animation: hero-sweep 9s ease-in-out infinite;
+}
+@keyframes hero-sweep {
+  0%   { --sweep-x: 0%; opacity: 0.7; }
+  50%  { --sweep-x: 100%; opacity: 1; }
+  100% { --sweep-x: 0%; opacity: 0.7; }
+}
+@property --sweep-x {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
 }
 
 /* Trophy hero video — autoplay, muted, looped */
@@ -276,14 +290,33 @@ button {
   justify-content: center;
   align-items: center;
   width: 100%;
-  aspect-ratio: 1 / 1;
-  max-width: 420px;
+  max-width: 460px;
   margin: 0 auto;
+  /* CSS mask that fades the bottom-right corner where the source video has a
+     small Gemini watermark. Radial gradient fades the lower-right ~80px to
+     transparent so the watermark blends into the page background. */
+  -webkit-mask-image: radial-gradient(
+    circle at 86% 88%,
+    transparent 0,
+    transparent 36px,
+    #000 80px,
+    #000 100%
+  );
+  mask-image: radial-gradient(
+    circle at 86% 88%,
+    transparent 0,
+    transparent 36px,
+    #000 80px,
+    #000 100%
+  );
 }
 .hero-trophy-wrap video {
   width: 100%;
-  height: 100%;
-  object-fit: contain;
+  height: auto;
+  display: block;
+  /* Slightly negative bottom offset hides any remaining watermark pixels in
+     case the mask radius doesn't fully cover them on different aspect ratios. */
+  margin-bottom: -8px;
   filter: drop-shadow(0 0 32px rgba(91, 140, 255, 0.35));
 }
 
@@ -1580,7 +1613,84 @@ a.bracket-match:hover {
   font-size: 12px;
 }
 
-/* ---- Knockout bracket ---- */
+/* ---- Structural bracket (WC 2026 empty-state) ---- */
+.structural-bracket {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  padding: 8px 4px 24px;
+  align-items: flex-start;
+}
+.structural-bracket-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  flex-shrink: 0;
+}
+.structural-bracket-round-title {
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  text-align: center;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.structural-bracket-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.structural-bracket-card {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.structural-bracket-card:hover {
+  border-color: var(--accent-dim);
+  background: rgba(91, 140, 255, 0.05);
+}
+.structural-bracket-card-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-3);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+.structural-bracket-card-num {
+  color: var(--text-2);
+}
+.structural-bracket-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.structural-bracket-avatar {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px dashed var(--text-3);
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+.structural-bracket-team {
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+/* ---- Knockout bracket (real fixtures path) ---- */
 .bracket-wrap {
   display: flex;
   gap: 20px;
