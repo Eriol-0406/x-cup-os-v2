@@ -265,16 +265,43 @@ function SpecialsList({ type }: { type: string }) {
   if (loading) return <div className="loading-card"><span className="spinner" /> Loading…</div>;
   if (markets.length === 0) return <div className="preview-empty">No {type.replace(/_/g, " ")} markets yet.</div>;
 
+  // WC 2026 group-winner markets are seeded from API-Football's pre-draw group
+  // assignments. The actual FIFA draw publishes closer to the tournament, so
+  // any group with fewer than 4 teams is provisional. Flag it clearly so users
+  // know they're betting on a draft draw, not the final.
+  const isGroupWinnerTab = type === "group_winner";
+  const hasProvisional = isGroupWinnerTab && markets.some((m) => m.outcomes.length < 4);
+
   return (
-    <div className="specials-list">
-      {markets.map((m) => (
-        <SpecialCard key={m.id} m={m} />
-      ))}
-    </div>
+    <>
+      {hasProvisional && (
+        <div
+          style={{
+            padding: "10px 14px",
+            marginBottom: 16,
+            background: "rgba(255, 196, 0, 0.08)",
+            border: "1px solid rgba(255, 196, 0, 0.25)",
+            borderRadius: 8,
+            color: "#ffd66e",
+            fontSize: 12,
+            lineHeight: 1.5,
+          }}
+        >
+          <strong>⚠ Provisional groups</strong> — FIFA's official WC 2026 group draw is published
+          closer to the tournament. Group memberships below come from API-Football's pre-draw
+          qualifier data and may not match the final draw. Markets settle on the final draw.
+        </div>
+      )}
+      <div className="specials-list">
+        {markets.map((m) => (
+          <SpecialCard key={m.id} m={m} provisional={isGroupWinnerTab && m.outcomes.length < 4} />
+        ))}
+      </div>
+    </>
   );
 }
 
-function SpecialCard({ m }: { m: TournamentSpecialView }) {
+function SpecialCard({ m, provisional }: { m: TournamentSpecialView; provisional?: boolean }) {
   const { state: walletState, connect } = useWallet();
   const [amount, setAmount] = useState("10");
   const [staking, setStaking] = useState<number | null>(null);
@@ -314,7 +341,28 @@ function SpecialCard({ m }: { m: TournamentSpecialView }) {
     <div className="special-card">
       <div className="special-card-header">
         <strong>{m.question}</strong>
-        <span className="special-card-meta">M#{m.marketId} · {m.totalPotUsdc} USDC pool</span>
+        <span className="special-card-meta" style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          {provisional && (
+            <span
+              title="WC 2026 group draw not finalized — current teams come from API-Football's pre-draw qualifier data"
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "#ffd66e",
+                border: "1px solid rgba(255, 196, 0, 0.35)",
+                borderRadius: 4,
+                padding: "1px 5px",
+                background: "rgba(255, 196, 0, 0.08)",
+                cursor: "help",
+              }}
+            >
+              Provisional
+            </span>
+          )}
+          <span>M#{m.marketId} · {m.totalPotUsdc} USDC pool</span>
+        </span>
       </div>
       {m.settled && (
         <div className="status-pill status-settled" style={{ display: "inline-block", marginBottom: 8 }}>
