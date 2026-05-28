@@ -438,23 +438,50 @@ button {
   gap: 6px;
 }
 
-textarea.strategy-input {
+/* .strategy-input applies to both <textarea> and <input>. The textarea-only
+   bits (min-height, resize) are scoped down with textarea. selector. */
+.strategy-input {
   width: 100%;
-  min-height: 180px;
-  padding: 14px;
+  padding: 10px 14px;
   background: var(--bg-0);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text-1);
   font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  /* Reset Safari/iOS native search input styling */
+  -webkit-appearance: none;
+  appearance: none;
+}
+textarea.strategy-input {
+  min-height: 180px;
+  padding: 14px;
   font-size: 15px;
   line-height: 1.55;
   resize: vertical;
-  outline: none;
-  transition: border-color 0.15s;
 }
-textarea.strategy-input:focus { border-color: var(--accent-dim); }
-textarea.strategy-input::placeholder { color: var(--text-3); }
+.strategy-input:focus {
+  border-color: var(--accent-dim);
+  box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.12);
+}
+.strategy-input::placeholder { color: var(--text-3); }
+/* Strip the awkward built-in search cancel button on WebKit */
+.strategy-input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  height: 12px;
+  width: 12px;
+  background: var(--text-3);
+  border-radius: 999px;
+  cursor: pointer;
+  margin-left: 4px;
+  mask: linear-gradient(45deg, transparent 46%, currentColor 46% 54%, transparent 54%),
+        linear-gradient(-45deg, transparent 46%, currentColor 46% 54%, transparent 54%);
+  -webkit-mask: linear-gradient(45deg, transparent 46%, currentColor 46% 54%, transparent 54%),
+                linear-gradient(-45deg, transparent 46%, currentColor 46% 54%, transparent 54%);
+}
 
 .examples {
   display: flex;
@@ -2117,10 +2144,53 @@ a.bracket-match:hover {
 /* ---- Footer ---- */
 .footer {
   border-top: 1px solid var(--border);
-  padding: 24px 0;
-  text-align: center;
+  padding: 20px 0;
   color: var(--text-3);
   font-size: 11px;
   font-family: ui-monospace, SFMono-Regular, Menlo, "Roboto Mono", Consolas, monospace;
   letter-spacing: 0.05em;
+}
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.footer-tagline {
+  color: var(--text-3);
+}
+.footer-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.footer-links a:hover {
+  color: #5feaff;
+}
+.footer-links a svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+.footer-sep {
+  color: var(--text-3);
+  opacity: 0.5;
+}
+.footer-credit {
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+}
+@media (max-width: 600px) {
+  .footer-inner { justify-content: center; text-align: center; }
 }
