@@ -68,22 +68,18 @@ export function Header() {
 
   return (
     <>
-      {/* Testnet disclaimer — sits ABOVE the sticky header as its own sticky
-          bar so the yellow band is the very top of the viewport (no black
-          header padding above it). Higher z-index than `.header` so it
-          always stacks first. */}
-      <div className="testnet-banner">
-        X Layer Testnet · Mock USDC · Never send mainnet funds to your agent wallet
-      </div>
-      {/* Brand breadcrumb strip — three-part chip identifying tournament + chain.
-          Matches the ZK-VAR / Polymarket-style 'context bar' that anchors every
-          page with what tournament + what chain you're on. */}
+      {/* Unified brand + testnet strip — combines the context breadcrumb
+          (cyan) with the testnet safety warning (amber) in one sticky row
+          above the nav header. Avoids stacking two bars at the top of the
+          viewport. */}
       <div className="brand-strip">
         <span>X-CUP</span>
         <span className="brand-strip-pipe">|</span>
         <span>WORLD CUP 2026 MARKETS</span>
         <span className="brand-strip-pipe">|</span>
         <span>X LAYER TESTNET</span>
+        <span className="brand-strip-pipe">·</span>
+        <span className="brand-strip-warn">⚠ MOCK USDC — never send mainnet funds</span>
       </div>
     <header className="header">
       <div className="container header-inner">

@@ -53,49 +53,37 @@ button {
   }
 }
 
-/* ---- Testnet disclaimer banner (sticks above the nav header) ---- */
-.testnet-banner {
-  background: rgba(255, 196, 0, 0.1);
-  border-bottom: 1px solid rgba(255, 196, 0, 0.25);
-  color: #ffd66e;
-  font-size: 11px;
-  font-weight: 500;
-  font-family: ui-monospace, SFMono-Regular, Menlo, "Roboto Mono", Consolas, monospace;
-  letter-spacing: 0.08em;
-  padding: 6px 12px;
-  text-align: center;
-  text-transform: uppercase;
-  position: sticky;
-  top: 0;
-  z-index: 12; /* above the brand strip and nav header */
-  backdrop-filter: blur(8px);
-}
-
-/* ---- Brand breadcrumb strip (sticks between testnet banner and nav) ---- */
+/* ---- Brand + testnet strip (single sticky bar above the nav header) ---- */
 .brand-strip {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  background: rgba(8, 9, 12, 0.85);
+  flex-wrap: wrap;
+  gap: 12px;
+  background: rgba(8, 9, 12, 0.9);
   border-bottom: 1px solid var(--border);
   color: #5feaff;
   font-size: 11px;
   font-family: ui-monospace, SFMono-Regular, Menlo, "Roboto Mono", Consolas, monospace;
   font-weight: 600;
   letter-spacing: 0.14em;
-  padding: 6px 12px;
+  padding: 7px 14px;
   text-transform: uppercase;
   position: sticky;
-  top: 28px; /* directly below the testnet banner */
-  z-index: 11;
+  top: 0;
+  z-index: 12;
   backdrop-filter: blur(8px);
   text-shadow: 0 0 8px rgba(95, 234, 255, 0.4);
 }
 .brand-strip-pipe {
   color: var(--text-3);
-  opacity: 0.6;
+  opacity: 0.5;
   text-shadow: none;
+}
+.brand-strip-warn {
+  color: #ffd66e;
+  text-shadow: 0 0 8px rgba(255, 214, 110, 0.35);
+  letter-spacing: 0.06em;
 }
 
 /* ---- Header ---- */
@@ -105,7 +93,7 @@ button {
   background: rgba(8, 9, 12, 0.85);
   backdrop-filter: blur(8px);
   position: sticky;
-  top: 56px; /* sit below testnet banner (~28px) + brand strip (~28px) */
+  top: 32px; /* sit directly below the unified brand strip */
   z-index: 10;
 }
 /* Header spans the FULL viewport — logo flush left, wallet flush right.
@@ -267,37 +255,44 @@ button {
 
 /* Animated dot-grid + horizon glow ambient backdrop, lives behind the hero.
    The dots drift diagonally; a secondary radial sweep moves vertically so
-   the motion is unmistakable instead of subliminal. */
+   the motion is unmistakable instead of subliminal. The pseudo-elements
+   extend well below the hero box so their natural radial fades merge into
+   the page background instead of forming a visible cutoff edge. */
 .hero::before {
   content: "";
   position: absolute;
-  inset: -64px -32px -32px -32px;
+  inset: -64px -32px -160px -32px;
   z-index: -2;
   background-image:
-    radial-gradient(rgba(91, 140, 255, 0.28) 1px, transparent 1px),
-    radial-gradient(rgba(91, 140, 255, 0.16) 1px, transparent 1px);
+    radial-gradient(rgba(91, 140, 255, 0.26) 1px, transparent 1px),
+    radial-gradient(rgba(91, 140, 255, 0.14) 1px, transparent 1px);
   background-size: 32px 32px, 64px 64px;
   background-position: 0 0, 16px 16px;
-  mask-image: radial-gradient(ellipse at center, #000 0%, transparent 78%);
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, transparent 78%);
+  /* Soft elliptical mask centered on the hero so dots fade gradually toward
+     all four edges — no sharp boundary anywhere. */
+  mask-image: radial-gradient(ellipse 80% 65% at 50% 45%, #000 0%, transparent 90%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 65% at 50% 45%, #000 0%, transparent 90%);
   animation: hero-drift 12s linear infinite;
 }
 @keyframes hero-drift {
   from { background-position: 0 0, 16px 16px; }
   to   { background-position: 64px 64px, 80px 80px; }
 }
-/* Sweeping radial glow that travels left → right behind the hero. Makes
-   the page feel alive without competing with the trophy or the text. */
+/* Sweeping radial glow + horizon. Stretched 220px below the hero so the
+   horizon's natural radial falloff blends into the page rather than ending
+   at a visible edge. */
 .hero::after {
   content: "";
   position: absolute;
-  inset: -64px -32px -32px -32px;
+  inset: -64px -32px -220px -32px;
   z-index: -1;
   background:
-    radial-gradient(ellipse at 50% 100%, rgba(91, 140, 255, 0.25) 0%, transparent 55%),
-    radial-gradient(circle at var(--sweep-x, 50%) 50%, rgba(91, 140, 255, 0.18) 0%, transparent 18%);
+    radial-gradient(ellipse 60% 40% at 50% 80%, rgba(91, 140, 255, 0.22) 0%, transparent 75%),
+    radial-gradient(circle 240px at var(--sweep-x, 50%) 50%, rgba(91, 140, 255, 0.16) 0%, transparent 80%);
   pointer-events: none;
   animation: hero-sweep 9s ease-in-out infinite;
+  mask-image: linear-gradient(to bottom, #000 0%, #000 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 80%, transparent 100%);
 }
 @keyframes hero-sweep {
   0%   { --sweep-x: 0%; opacity: 0.7; }
