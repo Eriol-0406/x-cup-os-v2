@@ -8,6 +8,34 @@ import { listFixtures, fetchStandings, type FixtureRecord, type StandingsTeam } 
 const ROUND_ORDER = ["Round of 16", "Quarter-finals", "Semi-finals", "Final"] as const;
 type Round = (typeof ROUND_ORDER)[number];
 
+/**
+ * FIFA's official WC 2026 R32 seeding. Top-to-bottom on each side of the
+ * bracket. Labels follow the FIFA convention: "1A" = winner of Group A,
+ * "2B" = runner-up of Group B, "3CDEF" = one of the best 3rd-place finishers
+ * from groups C / D / E / F. These are the actual published seed slots —
+ * who fills them depends on group-stage results.
+ */
+const R32_LEFT: Array<[string, string]> = [
+  ["1E", "3ABCDF"],
+  ["1I", "3CDFGH"],
+  ["2A", "2B"],
+  ["1F", "2C"],
+  ["2K", "2L"],
+  ["1H", "2J"],
+  ["1D", "3BEFIJ"],
+  ["1G", "3AEHIJ"],
+];
+const R32_RIGHT: Array<[string, string]> = [
+  ["1C", "2F"],
+  ["2E", "2I"],
+  ["1A", "3CEFHI"],
+  ["1L", "3EHIJK"],
+  ["1J", "2H"],
+  ["2D", "2G"],
+  ["1B", "3EFGIJ"],
+  ["1K", "3DEIJL"],
+];
+
 
 export function KnockoutBracket() {
   const [fixtures, setFixtures] = useState<FixtureRecord[]>([]);
@@ -118,26 +146,7 @@ export function KnockoutBracket() {
         </div>
 
         {fixtures.length === 0 ? (
-          <div
-            className="card"
-            style={{
-              padding: 32,
-              textAlign: "center",
-              border: "1px dashed var(--border)",
-            }}
-          >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🏟️</div>
-            <strong style={{ fontSize: 15 }}>Knockout bracket not finalized yet</strong>
-            <p style={{ color: "var(--text-3)", fontSize: 13, margin: "8px auto 0", maxWidth: 480, lineHeight: 1.5 }}>
-              FIFA hasn't published the knockout pairings yet — they depend on the group-stage
-              results. Once API-Football syncs the R16 / QF / SF / Final fixtures, matches will
-              appear here automatically.
-            </p>
-            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
-              <Link href="/match" className="btn">View group-stage fixtures →</Link>
-              <Link href="/outrights" className="btn">Bet on Tournament Winner →</Link>
-            </div>
-          </div>
+          <BracketTree groups={groups} />
         ) : (
           <div className="bracket-wrap">
             {byRound.map((round, idx) => (
@@ -210,6 +219,143 @@ function BracketMatch({ f }: { f: FixtureRecord }) {
     >
       {content}
     </Link>
+  );
+}
+
+/**
+ * FIFA WC 2026 bracket tree visualization for the empty-state. Two-sided
+ * bracket diagram with FIFA's official seed labels in R32, TBD placeholders
+ * in R16 / QF / SF / Final / Bronze. Group cards on the far left and right
+ * show qualified team flags (when group_letter is known).
+ *
+ * Rendered when no real knockout fixtures have been synced from API-Football
+ * yet — gets replaced by the real BracketMatch grid the moment the R32+
+ * fixtures are added to the DB.
+ */
+function BracketTree({ groups }: { groups: StandingsTeam[][] }) {
+  // Map "Group X" → teams. Falls back to empty array if a group isn't synced.
+  const teamsByGroup = new Map<string, StandingsTeam[]>();
+  for (const g of groups) {
+    const letter = g[0]?.group?.replace(/^Group\s+/i, "").trim().toUpperCase();
+    if (letter) teamsByGroup.set(letter, g);
+  }
+  const groupsLeft = ["A", "B", "C", "D", "E", "F"];
+  const groupsRight = ["G", "H", "I", "J", "K", "L"];
+
+  return (
+    <div className="bracket-tree-wrap">
+      <div className="bracket-tree">
+        {/* Left half */}
+        <BracketSide
+          side="left"
+          groupLetters={groupsLeft}
+          teamsByGroup={teamsByGroup}
+          r32={R32_LEFT}
+        />
+
+        {/* Center column — Final + trophy + Bronze */}
+        <div className="bracket-center-col">
+          <div className="bracket-center-label">World Champions</div>
+          <div className="bracket-tbd-slot bracket-tbd-final">TBD</div>
+          <div className="bracket-trophy">🏆</div>
+          <div className="bracket-center-label bracket-center-label-bronze">Bronze Winner</div>
+          <div className="bracket-tbd-slot">TBD</div>
+        </div>
+
+        {/* Right half (mirror) */}
+        <BracketSide
+          side="right"
+          groupLetters={groupsRight}
+          teamsByGroup={teamsByGroup}
+          r32={R32_RIGHT}
+        />
+      </div>
+      <div className="bracket-tree-footer">
+        <span>
+          Labels follow FIFA's official WC 2026 seeding (1A = winner of Group A, 3CDEF = best
+          3rd-placed team from C/D/E/F). Slots fill in as group stage concludes.
+        </span>
+        <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap" }}>
+          <Link href="/match" className="btn" style={{ fontSize: 12 }}>
+            Group fixtures →
+          </Link>
+          <Link href="/outrights" className="btn" style={{ fontSize: 12 }}>
+            Tournament Winner →
+          </Link>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function BracketSide({
+  side,
+  groupLetters,
+  teamsByGroup,
+  r32,
+}: {
+  side: "left" | "right";
+  groupLetters: string[];
+  teamsByGroup: Map<string, StandingsTeam[]>;
+  r32: Array<[string, string]>;
+}) {
+  return (
+    <div className={`bracket-side bracket-side-${side}`}>
+      <div className="bracket-groups-col">
+        {groupLetters.map((g) => (
+          <GroupCard key={g} letter={g} teams={teamsByGroup.get(g) ?? []} />
+        ))}
+      </div>
+      <div className="bracket-round-col bracket-round-r32">
+        {r32.map(([a, b], i) => (
+          <div key={i} className="bracket-tbd-slot bracket-tbd-pair">
+            <span>{a}</span>
+            <span className="bracket-tbd-divider" />
+            <span>{b}</span>
+          </div>
+        ))}
+      </div>
+      <div className="bracket-round-col bracket-round-r16">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="bracket-tbd-slot">TBD</div>
+        ))}
+      </div>
+      <div className="bracket-round-col bracket-round-qf">
+        {[0, 1].map((i) => (
+          <div key={i} className="bracket-tbd-slot">TBD</div>
+        ))}
+      </div>
+      <div className="bracket-round-col bracket-round-sf">
+        <div className="bracket-tbd-slot">TBD</div>
+      </div>
+    </div>
+  );
+}
+
+function GroupCard({ letter, teams }: { letter: string; teams: StandingsTeam[] }) {
+  return (
+    <div className="bracket-group-pill">
+      <div className="bracket-group-flags">
+        {[0, 1, 2, 3].map((i) => {
+          const team = teams[i];
+          if (!team) {
+            return <span key={i} className="bracket-group-flag-empty" />;
+          }
+          return (
+            <Image
+              key={i}
+              src={team.team.logo}
+              alt={team.team.name}
+              width={20}
+              height={20}
+              unoptimized
+              className="bracket-group-flag"
+            />
+          );
+        })}
+      </div>
+      <div className="bracket-group-label">Group {letter}</div>
+    </div>
   );
 }
 
