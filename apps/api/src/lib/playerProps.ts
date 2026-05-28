@@ -147,10 +147,10 @@ export async function createFirstScorerMarkets(opts: {
   // closeTime: 7 days out (same convention as fixture markets for historical replay)
   const closeTime = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
 
-  // Free tier is 10 req/min — pace ourselves at 1 req per ~7s to stay safely
-  // under the limit even if there's other concurrent traffic.
-  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  let firstRequest = true;
+  // API-Football pacing — Pro tier is 450 req/min so we don't need explicit
+  // sleeps between calls; the on-chain createMarket tx (~3s per fixture) is
+  // already slower than any rate limit we'd hit. If you downgrade to free tier
+  // (10/min), reintroduce `await sleep(7_000)` between iterations.
 
   for (const f of fixtures) {
     if (f.playerProps.length > 0) {
@@ -159,8 +159,6 @@ export async function createFirstScorerMarkets(opts: {
     }
 
     try {
-      if (!firstRequest) await sleep(7_000);
-      firstRequest = false;
       // Fetch fresh events (1 API call per fixture, in-memory cached for 1h)
       const fresh = await fetchFixture(f.id);
       if (!fresh) {
