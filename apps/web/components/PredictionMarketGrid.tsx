@@ -124,6 +124,11 @@ function PredictionCard({ m, onAfterStake }: { m: PredictionMarketView; onAfterS
   };
   useEffect(() => () => clearTimer(), []);
 
+  // When the pool is empty (no one has bet yet), the implied probability is
+  // 0 by default — which would render the bar as 100% red and "0% YES / 100%
+  // NO". That's misleading: nobody has taken a side. Detect this and show a
+  // neutral state instead.
+  const noBetsYet = m.totalPotUsdc === 0;
   const yesPct = (m.yesProb * 100).toFixed(0);
   const noPct = (100 - Number(yesPct)).toFixed(0);
   const isWinner = (outcome: 0 | 1) => m.settled && m.winningOutcome === outcome;
@@ -195,13 +200,38 @@ function PredictionCard({ m, onAfterStake }: { m: PredictionMarketView; onAfterS
       <div className="prediction-question">{m.question}</div>
 
       <div className="prediction-bar-wrap">
-        <span className={`prediction-bar-yes${isWinner(0) ? " prediction-bar-winner" : ""}`} style={{ width: `${m.yesProb * 100}%` }} />
-        <span className={`prediction-bar-no${isWinner(1) ? " prediction-bar-winner" : ""}`} style={{ width: `${(1 - m.yesProb) * 100}%` }} />
+        {noBetsYet ? (
+          // Neutral gray fill spanning the full bar — no side has any stake yet
+          <span
+            style={{
+              width: "100%",
+              background: "var(--border)",
+              opacity: 0.6,
+              display: "block",
+              height: "100%",
+            }}
+          />
+        ) : (
+          <>
+            <span className={`prediction-bar-yes${isWinner(0) ? " prediction-bar-winner" : ""}`} style={{ width: `${m.yesProb * 100}%` }} />
+            <span className={`prediction-bar-no${isWinner(1) ? " prediction-bar-winner" : ""}`} style={{ width: `${(1 - m.yesProb) * 100}%` }} />
+          </>
+        )}
       </div>
       <div className="prediction-prob-row">
-        <span style={{ color: "var(--success)" }}>YES {yesPct}%</span>
-        <span style={{ color: "var(--text-3)" }}>{m.totalPotUsdc.toFixed(0)} USDC pool</span>
-        <span style={{ color: "var(--error)" }}>NO {noPct}%</span>
+        {noBetsYet ? (
+          <>
+            <span style={{ color: "var(--text-3)" }}>YES —</span>
+            <span style={{ color: "var(--text-3)", fontStyle: "italic" }}>no bets yet</span>
+            <span style={{ color: "var(--text-3)" }}>NO —</span>
+          </>
+        ) : (
+          <>
+            <span style={{ color: "var(--success)" }}>YES {yesPct}%</span>
+            <span style={{ color: "var(--text-3)" }}>{m.totalPotUsdc.toFixed(0)} USDC pool</span>
+            <span style={{ color: "var(--error)" }}>NO {noPct}%</span>
+          </>
+        )}
       </div>
 
       {!m.settled && (

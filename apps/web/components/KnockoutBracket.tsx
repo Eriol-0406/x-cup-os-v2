@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { listFixtures, fetchStandings, type FixtureRecord, type StandingsTeam } from "@/lib/api";
 
@@ -109,28 +110,63 @@ export function KnockoutBracket() {
             Knockout Bracket
           </h2>
           <div style={{ color: "var(--text-3)", fontSize: 13, marginTop: 4 }}>
-            16 knockout matches: 8 in R16 → 4 QF → 2 SF → 1 Final. Winners highlighted in green.
+            {fixtures.length > 0
+              ? `${fixtures.length} knockout match${fixtures.length === 1 ? "" : "es"} across R16 → QF → SF → Final. Winners highlighted in green.`
+              : "Bracket fills in as the group stage concludes — pairings depend on group results."}
           </div>
         </div>
 
-        <div className="bracket-wrap">
-          {byRound.map((round, idx) => (
-            <div key={ROUND_ORDER[idx]} className="bracket-column">
-              <div className="bracket-round-title">{ROUND_ORDER[idx]}</div>
-              <div className="bracket-matches" style={{ "--space": `${idx * 18}px` } as any}>
-                {round.map((f) => (
-                  <BracketMatch key={f.id} f={f} />
-                ))}
+        {fixtures.length === 0 ? (
+          <div
+            className="card"
+            style={{
+              padding: 32,
+              textAlign: "center",
+              border: "1px dashed var(--border)",
+            }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🏟️</div>
+            <strong style={{ fontSize: 15 }}>Knockout bracket not finalized yet</strong>
+            <p style={{ color: "var(--text-3)", fontSize: 13, margin: "8px auto 0", maxWidth: 480, lineHeight: 1.5 }}>
+              No knockout fixtures have been scheduled — this happens before the group stage ends.
+              Once group results determine the pairings, R16 / QF / SF / Final matches will appear
+              here and become bettable on the Match page.
+            </p>
+            <Link href="/match" className="btn" style={{ marginTop: 16, display: "inline-block" }}>
+              View group-stage fixtures →
+            </Link>
+          </div>
+        ) : (
+          <div className="bracket-wrap">
+            {byRound.map((round, idx) => (
+              <div key={ROUND_ORDER[idx]} className="bracket-column">
+                <div className="bracket-round-title">{ROUND_ORDER[idx]}</div>
+                <div className="bracket-matches" style={{ "--space": `${idx * 18}px` } as any}>
+                  {round.length === 0 ? (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--text-3)",
+                        textAlign: "center",
+                        padding: "20px 8px",
+                        border: "1px dashed var(--border)",
+                        borderRadius: 6,
+                      }}
+                    >
+                      TBD
+                    </div>
+                  ) : (
+                    round.map((f) => <BracketMatch key={f.id} f={f} />)
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </>
   );
 }
-
-import Link from "next/link";
 
 function BracketMatch({ f }: { f: FixtureRecord }) {
   const settled = ["FT", "AET", "PEN"].includes(f.status);

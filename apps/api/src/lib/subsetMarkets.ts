@@ -159,9 +159,50 @@ export async function createToReachFinalMarkets(): Promise<CreatedSubMarket[]> {
 }
 
 /**
- * Top Goalscorer market — one multi-outcome market with N candidate players
- * pulled from /players/topscorers (top N by current goal count) + an "Other"
- * bucket. Capped at XCupMarket's 8-outcome max. Settled manually.
+ * Pre-tournament favorites used when the API returns no real top-scorer data
+ * (i.e. the tournament hasn't started yet, so nobody has scored). Lets us
+ * seed a bettable market BEFORE kickoff with well-known goal-favorites per
+ * season. Once real goals start landing, the existing market sticks with the
+ * frozen outcome list — that's fine, bookmakers do the same thing.
+ *
+ * Update this map when the WC season changes. Photos use API-Football's
+ * media CDN (stable across seasons for known players).
+ */
+const PRE_TOURNAMENT_TOP_SCORER_FAVORITES: Record<
+  number,
+  Array<{ name: string; photo?: string; teamHint: string }>
+> = {
+  2022: [
+    { name: "Lionel Messi", teamHint: "Argentina", photo: "https://media.api-sports.io/football/players/154.png" },
+    { name: "Kylian Mbappé", teamHint: "France", photo: "https://media.api-sports.io/football/players/278.png" },
+    { name: "Neymar", teamHint: "Brazil", photo: "https://media.api-sports.io/football/players/276.png" },
+    { name: "Harry Kane", teamHint: "England", photo: "https://media.api-sports.io/football/players/184.png" },
+    { name: "Karim Benzema", teamHint: "France", photo: "https://media.api-sports.io/football/players/521.png" },
+    { name: "Robert Lewandowski", teamHint: "Poland", photo: "https://media.api-sports.io/football/players/521.png" },
+    { name: "Cristiano Ronaldo", teamHint: "Portugal", photo: "https://media.api-sports.io/football/players/874.png" },
+  ],
+  2026: [
+    { name: "Kylian Mbappé", teamHint: "France", photo: "https://media.api-sports.io/football/players/278.png" },
+    { name: "Erling Haaland", teamHint: "Norway", photo: "https://media.api-sports.io/football/players/1100.png" },
+    { name: "Vinícius Júnior", teamHint: "Brazil", photo: "https://media.api-sports.io/football/players/2932.png" },
+    { name: "Jude Bellingham", teamHint: "England", photo: "https://media.api-sports.io/football/players/19220.png" },
+    { name: "Lautaro Martínez", teamHint: "Argentina", photo: "https://media.api-sports.io/football/players/342.png" },
+    { name: "Harry Kane", teamHint: "England", photo: "https://media.api-sports.io/football/players/184.png" },
+    { name: "Lamine Yamal", teamHint: "Spain", photo: "https://media.api-sports.io/football/players/47380.png" },
+  ],
+};
+
+/**
+ * Top Goalscorer market — one multi-outcome market with N candidate players +
+ * an "Other" bucket. Capped at XCupMarket's 8-outcome max. Settled manually
+ * by the admin oracle at tournament end.
+ *
+ * Data source order:
+ *   1. API-Football /players/topscorers — used mid/post-tournament when real
+ *      goals exist. Outcomes are the actual top-7 by goal count.
+ *   2. Pre-tournament favorites table above — used when API returns nothing
+ *      (the tournament hasn't started). Outcomes are well-known forwards
+ *      so users have something to bet on from day one.
  */
 export async function createTopScorerMarket(): Promise<CreatedSubMarket | { skipped: true; reason: string }> {
   const existing = await prisma.tournamentSpecial.findUnique({
@@ -169,21 +210,40 @@ export async function createTopScorerMarket(): Promise<CreatedSubMarket | { skip
   });
   if (existing) return { skipped: true, reason: "already exists" };
 
-  const scorers = await fetchTopScorers();
-  if (scorers.length === 0) return { skipped: true, reason: "no scorers data" };
+  type Outcome = { idx: number; label: string; teamId?: number | null; playerName: string; photo?: string };
+  let outcomes: Outcome[];
 
-  // Take top 7 + "Other / no goal"
-  const top = scorers.slice(0, 7);
-  const outcomes = [
-    ...top.map((s, i) => ({
-      idx: i,
-      label: s.player.name,
-      teamId: s.statistics?.[0]?.team?.id ?? null,
-      playerName: s.player.name,
-      photo: s.player.photo,
-    })),
-    { idx: top.length, label: "Other" },
-  ];
+  const scorers = await fetchTopScorers();
+  if (scorers.length > 0) {
+    // Real tournament data — use the live top 7
+    const top = scorers.slice(0, 7);
+    outcomes = [
+      ...top.map((s, i) => ({
+        idx: i,
+        label: s.player.name,
+        teamId: s.statistics?.[0]?.team?.id ?? null,
+        playerName: s.player.name,
+        photo: s.player.photo,
+      })),
+      { idx: top.length, label: "Other", playerName: "Other" },
+    ];
+  } else {
+    // Pre-tournament — fall back to favorites table
+    const favorites = PRE_TOURNAMENT_TOP_SCORER_FAVORITES[env.WC_SEASON];
+    if (!favorites || favorites.length === 0) {
+      return { skipped: true, reason: `no scorers data and no pre-tournament favorites configured for season ${env.WC_SEASON}` };
+    }
+    outcomes = [
+      ...favorites.map((f, i) => ({
+        idx: i,
+        label: `${f.name} (${f.teamHint})`,
+        teamId: null,
+        playerName: f.name,
+        photo: f.photo,
+      })),
+      { idx: favorites.length, label: "Other / unlisted scorer", playerName: "Other" },
+    ];
+  }
 
   const market = adminContract();
   const matchId = `WC${env.WC_SEASON}-TOPSCORER`;

@@ -250,11 +250,25 @@ function TeamCard({
 
       <div className="tourney-odds">
         <div className="tourney-bar-wrap">
-          <span className="tourney-bar" style={{ width: `${m.impliedYesProb * 100}%` }} />
+          {m.totalPotUsdc === 0 ? (
+            // Empty pool — neutral gray, no implied probability to read into
+            <span style={{ width: "100%", background: "var(--border)", opacity: 0.5, display: "block", height: "100%" }} />
+          ) : (
+            <span className="tourney-bar" style={{ width: `${m.impliedYesProb * 100}%` }} />
+          )}
         </div>
         <div className="tourney-prob-row">
-          <span style={{ color: "var(--success)" }}>YES {probPercent}%</span>
-          <span style={{ color: "var(--text-3)" }}>{m.totalPotUsdc.toFixed(0)} USDC pool</span>
+          {m.totalPotUsdc === 0 ? (
+            <>
+              <span style={{ color: "var(--text-3)", fontStyle: "italic" }}>no bets yet</span>
+              <span style={{ color: "var(--text-3)" }}>0 USDC pool</span>
+            </>
+          ) : (
+            <>
+              <span style={{ color: "var(--success)" }}>YES {probPercent}%</span>
+              <span style={{ color: "var(--text-3)" }}>{m.totalPotUsdc.toFixed(0)} USDC pool</span>
+            </>
+          )}
         </div>
         {typeof m.feeBps === "number" && m.feeBps > 0 && (
           <div
