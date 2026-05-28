@@ -273,7 +273,19 @@ function TeamCard({
             // Empty pool — neutral gray, no implied probability to read into
             <span style={{ width: "100%", background: "var(--border)", opacity: 0.5, display: "block", height: "100%" }} />
           ) : (
-            <span className="tourney-bar" style={{ width: `${m.impliedYesProb * 100}%` }} />
+            <>
+              {/* Both sides rendered side-by-side so a NO position is visible
+                  in red, not just blank space — same convention as the
+                  Predictions cards. */}
+              <span
+                className="tourney-bar tourney-bar-yes"
+                style={{ width: `${m.impliedYesProb * 100}%` }}
+              />
+              <span
+                className="tourney-bar tourney-bar-no"
+                style={{ width: `${(1 - m.impliedYesProb) * 100}%` }}
+              />
+            </>
           )}
         </div>
         <div className="tourney-prob-row">
@@ -286,6 +298,9 @@ function TeamCard({
             <>
               <span style={{ color: "var(--success)" }}>YES {probPercent}%</span>
               <span style={{ color: "var(--text-3)" }}>{m.totalPotUsdc.toFixed(0)} USDC pool</span>
+              <span style={{ color: "var(--error)" }}>
+                NO {Math.round((1 - m.impliedYesProb) * 100)}%
+              </span>
             </>
           )}
         </div>

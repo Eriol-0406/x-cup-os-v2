@@ -172,9 +172,37 @@ function ToReachFinalCard({ m, signal }: { m: TournamentMarketRecord; signal?: A
           <div className="tourney-team-code">{m.teamCode ?? ""}</div>
         </div>
       </div>
+      <div className="tourney-bar-wrap" style={{ marginBottom: 6 }}>
+        {m.totalPotUsdc === 0 ? (
+          <span style={{ width: "100%", background: "var(--border)", opacity: 0.5, display: "block", height: "100%" }} />
+        ) : (
+          <>
+            <span
+              className="tourney-bar tourney-bar-yes"
+              style={{ width: `${m.impliedYesProb * 100}%` }}
+            />
+            <span
+              className="tourney-bar tourney-bar-no"
+              style={{ width: `${(1 - m.impliedYesProb) * 100}%` }}
+            />
+          </>
+        )}
+      </div>
       <div className="tourney-prob-row">
-        <span style={{ color: m.impliedYesProb > 0 ? "var(--success)" : "var(--text-3)" }}>YES {(m.impliedYesProb * 100).toFixed(0)}%</span>
-        <span style={{ color: "var(--text-3)" }}>{m.totalPotUsdc} USDC pool</span>
+        {m.totalPotUsdc === 0 ? (
+          <>
+            <span style={{ color: "var(--text-3)", fontStyle: "italic" }}>no bets yet</span>
+            <span style={{ color: "var(--text-3)" }}>0 USDC pool</span>
+          </>
+        ) : (
+          <>
+            <span style={{ color: "var(--success)" }}>YES {(m.impliedYesProb * 100).toFixed(0)}%</span>
+            <span style={{ color: "var(--text-3)" }}>{m.totalPotUsdc} USDC pool</span>
+            <span style={{ color: "var(--error)" }}>
+              NO {Math.round((1 - m.impliedYesProb) * 100)}%
+            </span>
+          </>
+        )}
       </div>
       {signal && <ArbChip signal={signal} side="reach_final" />}
       <div className="tourney-bet-row">
