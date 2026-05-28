@@ -3,11 +3,13 @@ import { Header } from "@/components/Header";
 import { StrategyEditor } from "@/components/StrategyEditor";
 import { ActivityDashboard } from "@/components/ActivityDashboard";
 import { AgentPanel } from "@/components/AgentPanel";
+import { WelcomeModal } from "@/components/WelcomeModal";
 
 export default function HomePage() {
   return (
     <div className="shell">
       <Header />
+      <WelcomeModal />
 
       <main className="container" style={{ flex: 1 }}>
         <section className="hero">

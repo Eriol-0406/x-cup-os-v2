@@ -139,6 +139,39 @@ export function AgentPanel() {
     }
   };
 
+  /**
+   * Sends a small amount of testnet OKB from the user's main wallet → their
+   * burner. The burner needs gas to call stake()/claim() on-chain when the
+   * agent fires. 0.005 OKB covers ~500 transactions at current X Layer
+   * testnet gas prices — plenty for a demo session.
+   */
+  const onTopUpOkb = async () => {
+    if (agent.kind !== "ready") return;
+    setFund({ kind: "approving" });
+    armWalletTimeout();
+    try {
+      const signer = await signerProvider();
+      setFund({ kind: "sending" });
+      const tx = await signer.sendTransaction({
+        to: agent.address,
+        value: ethers.parseEther("0.005"),
+      });
+      setFund({ kind: "sending", txHash: tx.hash });
+      await tx.wait();
+      clearTimer();
+      setFund({ kind: "done", txHash: tx.hash });
+      await refresh();
+    } catch (err: any) {
+      clearTimer();
+      const code = err?.code;
+      const userRejected = code === 4001 || /rejected|denied|user closed|user cancel/i.test(err?.message ?? "");
+      setFund({
+        kind: "error",
+        message: userRejected ? "Transaction rejected" : err?.message ?? "Top-up failed",
+      });
+    }
+  };
+
   if (agent.kind === "noWallet") {
     return null; // Render nothing until wallet is connected — the editor is the focus.
   }
@@ -181,44 +214,82 @@ export function AgentPanel() {
         )}
 
         {agent.kind === "ready" && (
-          <div className="agent-fund-row">
-            <div className="agent-fund-info">
-              <span style={{ fontSize: 12, color: "var(--text-3)" }}>
-                Your USDC balance: <strong style={{ color: "var(--text-2)" }}>
-                  {Number(ethers.formatUnits(agent.userUsdc, 6)).toFixed(2)}
-                </strong>
+          <>
+            <div className="agent-fund-row">
+              <div className="agent-fund-info">
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>
+                  Your USDC balance: <strong style={{ color: "var(--text-2)" }}>
+                    {Number(ethers.formatUnits(agent.userUsdc, 6)).toFixed(2)}
+                  </strong>
+                </span>
+              </div>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={fundAmount}
+                onChange={(e) => setFundAmount(e.target.value)}
+                className="strategy-input"
+                style={{ minHeight: 36, padding: "8px 12px", maxWidth: 120, fontSize: 13 }}
+                disabled={agent.userUsdc === 0n}
+              />
+              <span style={{ color: "var(--text-3)", fontSize: 13 }}>USDC →</span>
+              <button
+                className="btn btn-primary"
+                onClick={onFund}
+                disabled={agent.userUsdc === 0n || fund.kind === "approving" || fund.kind === "sending"}
+                title={agent.userUsdc === 0n ? "Mint USDC first" : "Send USDC to your agent's burner wallet"}
+              >
+                {fund.kind === "approving"
+                  ? "Confirm in wallet…"
+                  : fund.kind === "sending"
+                    ? "Confirming on-chain…"
+                    : "Fund agent"}
+              </button>
+            </div>
+
+            {/* Secondary action row — mint USDC + top up OKB gas. Always
+                available so users don't get stuck if their burner runs dry. */}
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                marginTop: 10,
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <button
+                className="btn"
+                onClick={onMint}
+                disabled={fund.kind === "approving" || fund.kind === "sending"}
+                title="Mint 10,000 test USDC to your main wallet (open mint — anyone can call it)"
+                style={{ fontSize: 12 }}
+              >
+                + Mint 10k USDC
+              </button>
+              <button
+                className="btn"
+                onClick={onTopUpOkb}
+                disabled={fund.kind === "approving" || fund.kind === "sending"}
+                title="Send 0.005 OKB from your main wallet to your burner — covers ~500 agent transactions"
+                style={{ fontSize: 12 }}
+              >
+                ⛽ Top up agent gas (0.005 OKB)
+              </button>
+              <span style={{ fontSize: 11, color: "var(--text-3)", marginLeft: "auto" }}>
+                Need testnet OKB?{" "}
+                <a
+                  href="https://www.okx.com/x-layer/faucet"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "var(--accent)" }}
+                >
+                  X Layer faucet ↗
+                </a>
               </span>
             </div>
-            {agent.userUsdc === 0n ? (
-              <button className="btn btn-primary" onClick={onMint} disabled={fund.kind === "approving" || fund.kind === "sending"}>
-                {fund.kind === "approving" || fund.kind === "sending" ? "Minting…" : "Mint 10,000 test USDC"}
-              </button>
-            ) : (
-              <>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={fundAmount}
-                  onChange={(e) => setFundAmount(e.target.value)}
-                  className="strategy-input"
-                  style={{ minHeight: 36, padding: "8px 12px", maxWidth: 120, fontSize: 13 }}
-                />
-                <span style={{ color: "var(--text-3)", fontSize: 13 }}>USDC →</span>
-                <button
-                  className="btn btn-primary"
-                  onClick={onFund}
-                  disabled={fund.kind === "approving" || fund.kind === "sending"}
-                >
-                  {fund.kind === "approving"
-                    ? "Confirm in wallet…"
-                    : fund.kind === "sending"
-                      ? "Confirming on-chain…"
-                      : "Fund agent"}
-                </button>
-              </>
-            )}
-          </div>
+          </>
         )}
 
         {(fund.kind === "approving" || fund.kind === "sending") && (

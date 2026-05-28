@@ -1,263 +1,174 @@
-# X-Cup OS — Demo Script
+# X-Cup OS — 3-minute demo script
 
-> Exact happy-path sequence for the pre-recorded demo video. Every step has a
-> narration cue, a UI action, an expected outcome, and an on-chain proof link.
+> **Live URL:** https://x-cup-os-v2.vercel.app
+> **API:** https://x-cupapi-production.up.railway.app
+> **Contract:** [`0x5349be46935302f77acD6363D063efFE5DE27c42`](https://www.oklink.com/x-layer-testnet/address/0x5349be46935302f77acD6363D063efFE5DE27c42) (X Layer testnet)
 
-**Run time target:** 3 minutes (judges usually skim past 4 min)
-**Recording tool:** screen recorder of your choice (QuickTime, Loom, OBS).
-**Wallet shown on screen:** the deployer/demo wallet only — never your main wallet.
-
----
-
-## Pre-demo checklist (do once, ~5 min before recording)
-
-```bash
-# 1. Both servers up?
-lsof -i:3001 -i:4000 -P -n | grep LISTEN
-# Expect 2 LISTEN lines. If missing one:
-cd ~/x-cup-os/apps/api && npm run dev   # tab 1
-cd ~/x-cup-os/apps/web && npm run dev   # tab 2
-
-# 2. API quota left?
-curl -s http://localhost:4000/admin/api-status | jq '.requests'
-# Need at least 5 free for the demo. If less, wait until 00:00 UTC.
-
-# 3. Agent funded with USDC + OKB?
-curl -s http://localhost:4000/users/by-address/0xFaC819e2465C24529ad3684D61BFb442cC239d8E | jq '.agentAddress'
-# Then check that agent has USDC + OKB
-node -e "
-const { ethers } = require('ethers');
-(async () => {
-  const p = new ethers.JsonRpcProvider('https://testrpc.xlayer.tech');
-  const usdc = new ethers.Contract(
-    '0x47C57Eb98A9C025114aAd96b9f6048ffdc8Bb3fA',
-    ['function balanceOf(address) view returns (uint256)'],
-    p,
-  );
-  const agent = '0xA5b4C9eD2Fa661Ed350E0d0D50F8E202A6c6Eefe';
-  const [u, o] = await Promise.all([usdc.balanceOf(agent), p.getBalance(agent)]);
-  console.log('USDC:', ethers.formatUnits(u, 6), '| OKB:', ethers.formatEther(o));
-})();
-"
-# Need: USDC >= 100, OKB >= 0.005. If short, run the funding script below.
-
-# 4. Browser tabs ready
-# Tab A: http://localhost:3001 (the dApp)
-# Tab B: https://www.oklink.com/x-layer-testnet/address/0xb420447843a0868971A925C0c8ceC30c4b26b4f4 (XCupMarket explorer)
-# Tab C: an unused fixture's API-Football page for the "real data" beat
-```
-
-### Funding script (only if agent balance is low)
-
-```bash
-cd ~/x-cup-os && node --input-type=module -e "
-import { ethers } from 'ethers';
-import dotenv from 'dotenv';
-dotenv.config({ path: 'apps/api/.env' });
-const usdcAbi = (await import('./packages/abi/MockUSDC.abi.json', { with: { type: 'json' } })).default;
-const addr = (await import('./packages/abi/addresses.json', { with: { type: 'json' } })).default['1952'];
-const p = new ethers.JsonRpcProvider(addr.rpc);
-const deployer = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY, p);
-const agent = '0xA5b4C9eD2Fa661Ed350E0d0D50F8E202A6c6Eefe';
-const usdc = new ethers.Contract(addr.contracts.MockUSDC.address, usdcAbi, deployer);
-await (await usdc.transfer(agent, ethers.parseUnits('200', 6))).wait();
-await (await deployer.sendTransaction({ to: agent, value: ethers.parseEther('0.01') })).wait();
-console.log('Agent refunded: 200 USDC + 0.01 OKB');
-"
-```
+This is the recording script for a 3-minute demo video against the public deployment. Pace it at ~150 words/min — that's natural conversational speed. Every section has a target timestamp and the exact on-screen action to take.
 
 ---
 
-## Demo flow (the recording)
+## Pre-flight checklist (do BEFORE you hit record)
 
-### Beat 1 — "What is this?" (15 seconds)
-
-**Narration:** *"X-Cup OS is an autonomous betting product for the World Cup, built on X Layer. You write a strategy in plain English. An AI agent reads it, watches matches, and places bets on chain — without you ever clicking 'place bet'."*
-
-**Screen:** localhost:3001 hero, scroll once so judges see the editor + tournament grid + match list.
-
----
-
-### Beat 2 — "Three pillars, all on chain" (20 seconds)
-
-**Narration:** *"There are three markets to bet on. First — tournament-winner markets: 32 nations, one binary market per team."*
-
-**Action:** Scroll to **Tournament Winner** section. Hover over a few cards (Argentina, France, Brazil).
-
-**Narration cue:** *"These are the long-term sentiment bets — does this team lift the cup? Real teams from API-Football, real on-chain markets on X Layer."*
-
-**Action:** Scroll to **Live Markets**. Click the **Live / Upcoming / Finished** filter pills to show the count change.
-
-**Narration:** *"Second pillar — 64 per-fixture prediction markets, one per match. Synced from API-Football, real scores, real fixtures."*
+- [ ] Browser at `https://x-cup-os-v2.vercel.app` in a clean incognito window (fresh first-connect experience for the welcome modal demo)
+- [ ] OKX Wallet extension installed, X Layer testnet network added (chain 1952)
+- [ ] At least 0.05 OKB in your main wallet (faucet: https://www.okx.com/x-layer/faucet)
+- [ ] Browser DevTools closed, zoom at 100%, tab pinned to the URL
+- [ ] Disable browser notifications + Slack/Discord — no popups during recording
+- [ ] Have this script open on a second screen / phone for prompts
+- [ ] If `localStorage` already has `xcup_welcome_seen_v1`, clear site data so the welcome modal triggers
 
 ---
 
-### Beat 3 — "The AI agent" (45 seconds)
+## Script
 
-**Narration:** *"Third pillar — and the differentiator. The AI agent. Watch this."*
+### [0:00–0:20] — Hook
 
-**Action:** Connect wallet (header button) if not already connected. The Agent panel appears showing the burner wallet address + USDC + OKB balances.
+> **Visual:** Homepage hero, header visible, "X LAYER TESTNET" banner at top.
+>
+> **Narration:**
+>
+> "Polymarket-style prediction markets meet autonomous AI agents — for the World Cup. You write a betting strategy in plain English, deploy an agent, and it places bets on-chain when your conditions hit. Live on X Layer testnet right now."
 
-**Narration:** *"On first connect, the system generates a burner wallet — the agent's signer. The user funds it with USDC. The agent can never spend more than what's in this burner. That's the safety story."*
+### [0:20–0:50] — Connect wallet + onboarding
 
-**Action:** Scroll to the **Strategy Editor**. Type slowly:
+> **Action:** Click **Connect Wallet** → approve in OKX → wait for the welcome modal.
+>
+> **Narration while modal is visible:**
+>
+> "First-time visitors get a guided onboarding. Three steps: mint test USDC, top up agent gas, write a strategy. The agent has its own burner wallet — encrypted server-side — so users never have to sign every bet themselves."
+>
+> **Action:** Click **Got it, let me start** → wait for AgentPanel to populate (burner address + balances).
+>
+> **Action:** Click **+ Mint 10k USDC** → confirm in wallet → "minted" message → balance updates.
+>
+> **Action:** Click **⛽ Top up agent gas** → confirm in wallet → burner OKB updates.
 
-```
-If Argentina wins their next match, stake 30 USDC on YES
-```
+### [0:50–1:40] — Write the strategy + AI parse
 
-**Narration as you type:** *"I write my strategy in plain English. As I type, the right panel parses it in real time using Groq's Llama 3.3 — and forces the output through a strict JSON schema via tool-use, so it can't hallucinate a malformed bet."*
+> **Action:** Scroll to the "Your Strategy" editor. Type:
+>
+> > `If Argentina wins their next match and Mbappe scores, stake 50 USDC on YES for France reaches the final. Stop if I lose more than 200 USDC.`
+>
+> **Narration:**
+>
+> "The agent uses Llama 3.3 70B on Groq, with forced tool-use so we always get structured JSON back. Trigger conditions, action, risk limits — parsed live as you type."
+>
+> **Action:** Wait ~600ms — the right-side "Parsed Rules" panel fills with trigger cards (Argentina wins, Mbappe scores), action card (stake 50 YES on France-reaches-final), and risk card (max loss 200).
+>
+> **Narration:**
+>
+> "Notice it knows 'Argentina' means the team — we feed the AI the canonical team list, so 'La Albiceleste', 'Three Lions', 'Les Bleus' all resolve correctly. Plus team mentions get resolved to on-chain market IDs at deploy time, so the agent only fires on Argentina matches, not random France-vs-Brazil events."
+>
+> **Action:** Click **Deploy Agent →** → confirm. Strategy persists, status flips to **active**.
 
-**Action:** Pause. Show the right panel with the parsed trigger / action / risk cards.
+### [1:40–2:20] — Place an actual bet
 
-**Narration:** *"Trigger: match winner is Argentina. Action: stake 30 USDC YES. Notice the latency — sub-one-second."*
+Option A — **manual stake** (proves the on-chain layer is real):
 
-**Action:** Click **Deploy Agent →**.
+> **Action:** Click **Outrights** in the nav → **Tournament Winner** tab → scroll to Argentina or your team of choice.
+>
+> **Narration:**
+>
+> "Users can also place direct bets. Here are 48 tournament-winner markets — one per team — plus reach-final, group-winner, top-scorer, BTTS, over/under, first-scorer. All on-chain on X Layer."
+>
+> **Action:** Click **YES** on a card → wallet popup → approve USDC allowance → stake 10 USDC → tx confirms.
+>
+> **Action:** Card refreshes — pot bumps to 10 USDC, YES probability updates.
+>
+> **Action:** Click the tx hash → opens OKLink → shows the on-chain transaction. **Pause for 2 seconds on the explorer page.**
 
-**Narration:** *"On deploy, the backend resolves 'Argentina' to its 7 fixture markets in the database — so this strategy fires only on Argentina matches, never on someone else's."*
+Option B — **demo the agent firing autonomously** (only works if Railway is on `WC_SEASON=2022`; takes ~10s):
 
----
+> **Action:** Open a terminal alongside. Run:
+>
+> ```bash
+> curl -X POST https://x-cupapi-production.up.railway.app/admin/replay-fixture/855736
+> ```
+>
+> **Narration:**
+>
+> "Behind the scenes, every active strategy is watched against incoming match events. When the conditions hit, the agent autonomously calls stake on the contract. Here's a replay of Argentina vs Saudi Arabia from 2022 — the agent fires, the bet lands on-chain. No human clicked anything."
+>
+> **Action:** Scroll to the Agent Activity dashboard at the bottom → see the new fire row with tx hash + explorer link.
 
-### Beat 4 — "The agent fires autonomously" (45 seconds)
+### [2:20–2:50] — What's different
 
-**Narration:** *"Now the demo trick — because we're on World Cup 2022 historical data, I can replay any finished match in one click to show what the agent would have done."*
+> **Action:** Scroll the homepage hero nav cards on-screen (Match, Outrights, Predictions, Specials, Bracket, Leaderboard).
+>
+> **Narration, hitting these in order:**
+>
+> "A few things that make this more than a Polymarket clone:
+>
+> - **Variable per-market fees** — 1.8% on easy 1x2 bets, 0.9% on harder outrights like Top Scorer. Higher vig where it's deserved.
+> - **Cross-market arb chips** — if Argentina's winner-of-cup probability is higher than their reach-final probability, that's mathematically impossible. We surface those inconsistencies inline on the outright cards.
+> - **Multi-season** — the same DB serves WC 2022 historical replay and WC 2026 live, by flipping one env var. No re-deploy.
+> - **Open to anyone** — anyone with a wallet can deploy their own agent. The leaderboard ranks strategies by realized PnL, and a copy button lets you clone someone else's strategy into your account."
 
-**Action:** Scroll to Live Markets, find **Argentina vs Australia** (Round of 16). Click **"Replay this match →"** on that card.
+### [2:50–3:00] — Close
 
-*[Wait ~10 seconds for the on-chain flow to complete.]*
-
-**Narration:** *"The system pulled Argentina 2-1 Australia from API-Football. My Argentina strategy matched. The agent burner approved USDC, signed the stake transaction. Now the oracle settles the market with the real outcome. Now the agent auto-claims its share."*
-
-**Action:** Once the card shows **"✓ Replayed · 1 fire(s) · 1 claim(s) · settle tx ↗"**, click the **settle tx ↗** link.
-
-**Narration:** *"Settle transaction on X Layer testnet — verifiable on the explorer right now."*
-
-**Action:** Switch to the OKLink tab. The settle tx shows up.
-
-**Action:** Switch back to localhost:3001 and scroll to **Agent Activity**.
-
-**Narration:** *"And here in the agent activity log — the stake the agent placed, the explorer link, status confirmed. Everything that just happened is on chain."*
-
----
-
-### Beat 5 — "Tournament-winner bet (Pillar 1)" (30 seconds)
-
-**Narration:** *"You can also bet directly — no AI strategy needed — on the tournament-winner markets."*
-
-**Action:** Scroll to Tournament Winner, sort by A-Z, find **Argentina** card. Type `100` in the amount input, click **YES**.
-
-*[Wallet popup. Approve USDC if first time, then confirm stake.]*
-
-**Narration as the txs sign:** *"Approve USDC, sign the stake. 100 USDC bet that Argentina wins the tournament. Watch the implied YES probability bar fill."*
-
-**Action:** Card refreshes — bar fills, "YES 100%" appears.
-
----
-
-### Beat 6 — "Settle the tournament + claim" (30 seconds)
-
-**Action:** Cut to terminal. Run:
-
-```bash
-curl -X POST http://localhost:4000/admin/settle-tournament \
-  -H 'Content-Type: application/json' \
-  -d '{"winningTeamId":26}'  | jq
-```
-
-**Narration:** *"Argentina actually won World Cup 2022. The oracle now settles every tournament market — Argentina to YES, every other team to NO."*
-
-**Action:** Switch back to browser, refresh. Argentina card glows green with **CHAMP** badge. Every other card faded with **OUT** badge. **Claim winnings** button appears on Argentina card.
-
-**Action:** Click **Claim winnings** on Argentina card. Sign the tx.
-
-**Narration:** *"And now I claim my winnings. USDC arrives in my wallet. The full loop is done — on chain, verifiable, end to end."*
-
----
-
-### Beat 6.5 — "Anyone can follow a winning agent" (45 seconds)
-
-> Demonstrates Pillar 3's social layer. Requires a pre-provisioned second
-> wallet — run `node scripts/setup-second-user.mjs` BEFORE recording.
-
-**Pre-recording (do once):**
-
-```bash
-cd ~/x-cup-os
-node scripts/setup-second-user.mjs
-```
-
-The script prints a fresh wallet (address + privkey + mnemonic), provisions
-its burner via the API, and funds:
-- Main wallet with 0.005 OKB (for signing the Copy → tx)
-- Burner with 100 USDC + 0.005 OKB (for firing copied strategies)
-
-**Import into OKX Wallet:** Settings → Wallets → Import → "Private Key" →
-paste the printed key. Keep both User A (deployer) and User B (just imported)
-in your wallet account list.
-
-**Recording:**
-
-1. Open `localhost:3001/leaderboard` — header shows User A's wallet, top of
-   leaderboard shows your "If Argentina wins…" strategy
-2. **In OKX Wallet, switch active account to User B**
-3. Refresh — header now shows User B's truncated address
-4. `/leaderboard` re-renders — User A's strategy now shows a **"Copy →"** button
-   (User B can copy because it's not their own)
-5. Click **Copy →**. Status flashes "Copying…" then "✓ Cloned + activated in
-   your account"
-6. Navigate to `/match`, click **Replay this match →** on, say, Argentina vs
-   Australia
-7. **Both User A's original strategy AND User B's copy fire** — two `fire(s)`
-   show in the replay response, two separate burner addresses staked, two
-   separate USDC transfers on chain
-
-**Narration:** *"Anyone who deposits USDC can clone a winning strategy with
-one click. User B is a fresh wallet — never deployed a strategy themselves.
-They just copied User A's. When the match replays, both agents fire
-independently with their own funds, both burners get their own claim. This
-is how betting strategies spread on X-Cup OS — not via Telegram screenshots,
-on-chain."*
+> **Narration:**
+>
+> "Polymarket meets autonomous agents, sized for the World Cup. Live now on X Layer testnet — link below. Mainnet path needs a TEE for burner keys plus a real settlement oracle — both are documented next steps."
+>
+> **Visual:** Final shot on the homepage with the testnet banner visible.
 
 ---
 
-### Beat 7 — "Wrap" (10 seconds)
+## Backup scripts (if something breaks on-camera)
 
-**Narration:** *"X-Cup OS — write a strategy in English, an AI agent does the rest, every transaction on X Layer. Built in 7 days for the X Cup hackathon. Repo and contracts in the description."*
+### Wallet popup hangs
+> "My wallet's being slow — let me skip ahead. The transaction will land in a few seconds."
 
-**Screen:** show GitHub repo + contract address as on-screen text.
+Move on; come back if it eventually confirms.
+
+### Groq API rate-limits
+> "Free tier just kicked in. In production we'd be on a paid tier — same code, no pacing needed."
+
+Show the activity dashboard instead — it has real fire history from earlier sessions.
+
+### Vercel cold start makes the page slow
+> "That first load is the serverless cold start — subsequent users get the cached build."
+
+Reload once; should be instant.
+
+### "Couldn't load X" error
+> "This is a known one — usually a CORS misalignment after an env change. The data is still there; here's the API direct."
+
+Pivot to a terminal demo of the same endpoint.
 
 ---
 
-## On-chain proof links (paste in submission)
+## On-chain proof transactions (paste these into the video description)
 
-| Asset | Address | Link |
-|---|---|---|
-| XCupMarket contract | `0xb420447843a0868971A925C0c8ceC30c4b26b4f4` | https://www.oklink.com/x-layer-testnet/address/0xb420447843a0868971A925C0c8ceC30c4b26b4f4 |
-| MockUSDC (test stake token) | `0x47C57Eb98A9C025114aAd96b9f6048ffdc8Bb3fA` | https://www.oklink.com/x-layer-testnet/address/0x47C57Eb98A9C025114aAd96b9f6048ffdc8Bb3fA |
-| Demo agent (burner) | `0xA5b4C9eD2Fa661Ed350E0d0D50F8E202A6c6Eefe` | https://www.oklink.com/x-layer-testnet/address/0xA5b4C9eD2Fa661Ed350E0d0D50F8E202A6c6Eefe |
-| Sample fire tx (Argentina vs Mexico stake) | — | https://www.oklink.com/x-layer-testnet/tx/0x7ea6429a7b1240d56fd8ddaf0ed7cf8f531184b59f4144559044ed38893d6f40 |
-| Sample claim tx | — | https://www.oklink.com/x-layer-testnet/tx/0x3438a688a1c71e0229146c47f8c51b385671123715f1dba329b3967c230b4a92 |
-
-**Source repo:** https://github.com/Eriol-0406/x-cup-os
-
----
-
-## Backup plan if something breaks live (it shouldn't — pre-recorded — but)
-
-| Failure | Recovery |
+| What | Tx hash |
 |---|---|
-| Page blank | Cmd+Shift+R hard refresh. If still blank: `pkill -f "next dev" && cd ~/x-cup-os/apps/web && rm -rf .next && npm run dev` (deletes corrupted Next.js cache) |
-| API endpoint 500s | `pkill -f "tsx watch" && cd ~/x-cup-os/apps/api && npm run dev` |
-| Wallet popup hangs at "Approving USDC…" | Click the small **cancel** link on the card, then retry the bet |
-| Replay fails: "market not Open" | The market is already settled from a prior replay — pick a different fixture |
-| Replay fails: "agent USDC balance 0.0 < required N" | Re-fund the agent via the script in pre-demo checklist |
-| API-Football says "plan: Free plans don't have access" | You're querying a season > 2024. Confirm `WC_SEASON=2022` in `apps/api/.env` |
+| First manual stake (v2 contract) | _paste after recording_ |
+| Agent fire on a replay | _paste after recording_ |
+| Contract deploy (XCupMarket v2) | `0x15fa6160277aca9e803e15f04eae19ead37bf530e7997d56033e041ea05d923a` |
+| MockUSDC deploy (v2) | `0xda8aa9b636bc3d8305434d25b93dc8fe0e6fde85ba756cca188ce44bf4798d31` |
 
 ---
 
-## Known limitations to mention if asked
+## Architecture recap (for the video description box)
 
-- **WC 2026 data is paywalled** on the free tier. The build runs on WC 2022 (Qatar) historical data as a deterministic replay. Switching to live 2026 = one env var change (`WC_SEASON=2026`) after upgrading the plan.
-- **Cron-based live polling** is not yet wired — for the WC 2022 replay it's not needed because the manual "Replay this match" button covers the demo. Lands when we point at live data.
-- **LLM parsing has one known edge case**: strategies phrased as "if team X *loses*" historically caused the LLM to emit `team: "opponent"` (a placeholder). Fixed in the prompt now — but if you encounter it, rephrase as "if [opponent team] wins" or simply use `outcome: NO` for the team you're betting against.
-- **Wallet popup close detection** is wallet-vendor-specific. To work around inconsistent EIP-1193 reject codes there's a `cancel` link on every pending state and a 90s auto-timeout.
+```
+Frontend  →  Vercel               (Next.js 14, React, ethers v6, OKX Wallet)
+API       →  Railway              (Express + Prisma + Groq SDK)
+Database  →  Railway Postgres     (users, strategies, fires, fixtures, market metadata)
+Contract  →  X Layer testnet      (parimutuel, variable per-market fees, settable treasury)
+Data feed →  API-Football Pro     (live World Cup fixtures, predictions, lineups, top scorers)
+LLM       →  Groq Llama 3.3 70B   (forced tool-use, ~600ms parse latency)
+```
+
+286+ on-chain markets per season. WC 2022 (32 teams, 64 fixtures) and WC 2026 (48 teams, 104 fixtures) can coexist in one database.
+
+---
+
+## Talking points if asked in Q&A
+
+- **"Why parimutuel and not AMM?"** — Lower complexity, no liquidity bootstrap problem, fair payout math, matches Polymarket's mental model.
+- **"What about burner key security?"** — Encrypted in Postgres with AES-256-GCM. Acceptable for testnet. Mainnet path is OKX Agentic Wallet TEE or Lit Protocol.
+- **"How does settle work?"** — Admin-signed today. Production needs Chainlink Functions or similar with API-Football as the data source.
+- **"What happens if the AI mis-parses a strategy?"** — Frontend previews the parsed JSON live before deploy. User sees what the agent will actually do and can edit before confirming. Plus targetMarketIds resolution acts as a final guard — if the strategy mentions a team that doesn't exist, it just won't fire.
+- **"Why X Layer?"** — Cheap gas, EVM-compatible, growing dApp ecosystem, OKX Wallet integration. Same code ports to any EVM L2.

@@ -71,6 +71,22 @@ strategiesRouter.post("/", async (req, res) => {
     const dbUser = await prisma.user.findUnique({ where: { mainWallet: user.mainWallet } });
     if (!dbUser) return res.status(500).json({ ok: false, error: "user upsert failed" });
 
+    // Per-wallet cap. Open-to-strangers safety: prevents a single wallet from
+    // spamming strategies (which would burn the shared Groq quota and clutter
+    // the leaderboard). Counts `active` + `exhausted` — both occupy a "slot"
+    // until the user manually pauses or deletes one. `draft` doesn't count
+    // since it hasn't been deployed yet.
+    const MAX_ACTIVE_STRATEGIES = 5;
+    const activeCount = await prisma.strategy.count({
+      where: { userId: dbUser.id, status: { in: ["active", "exhausted"] } },
+    });
+    if (activeCount >= MAX_ACTIVE_STRATEGIES) {
+      return res.status(429).json({
+        ok: false,
+        error: `You already have ${activeCount} active strategies (max ${MAX_ACTIVE_STRATEGIES}). Pause or delete one before deploying a new one.`,
+      });
+    }
+
     // Phase-2: resolve team mentions → on-chain marketIds at deploy time.
     // If empty, the strategy still saves but won't fire (frontend warns the user).
     const targetMarketIds = await resolveStrategyTargets(validated.data);

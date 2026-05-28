@@ -3,7 +3,9 @@
 > A dApp on X Layer where football fans deploy AI agents that read plain-English
 > betting strategies and autonomously place bets on World Cup prediction markets.
 
-**Last updated:** 2026-05-27 · **Repo:** https://github.com/Eriol-0406/x-cup-os-v2 (v1 frozen at https://github.com/Eriol-0406/x-cup-os)
+**Last updated:** 2026-05-28 · **Repo:** https://github.com/Eriol-0406/x-cup-os-v2 (v1 frozen at https://github.com/Eriol-0406/x-cup-os)
+
+**Live deployment:** https://x-cup-os-v2.vercel.app (frontend) · https://x-cupapi-production.up.railway.app (API)
 
 ## Live deployment (X Layer Testnet, chain 1952)
 
@@ -136,16 +138,48 @@ Switching to live WC 2026 once API-Football plan is upgraded = change `WC_SEASON
 
 ---
 
-## Phase 5 — open agent deployment (planned, not yet built)
+## Phase 5 — open agent deployment (shipped 2026-05-28)
 
-Goal: let anyone connect a wallet and deploy their own agent + strategies. The architecture already supports this (each `User` is keyed by `mainWallet`, burner is auto-generated, watch loop already iterates all users). The deltas:
+Goal achieved: anyone can connect a wallet at https://x-cup-os-v2.vercel.app and deploy their own agent + strategies. End-to-end verified with a real on-chain stake from the deployer wallet on the production deployment.
 
-- [ ] **Public hosting** — v2 web → Vercel (env `NEXT_PUBLIC_API_URL` → public API URL). v2 API → Railway / Render / Fly with `DEPLOYER_PRIVATE_KEY`, `GROQ_API_KEY`, `API_FOOTBALL_KEY`, `BURNER_ENCRYPTION_KEY` set as env vars. Same Postgres DB as today.
-- [ ] **Burner OKB funding flow** — currently the user has to send testnet OKB to their burner manually. Add a "Top up agent gas" button that sends 0.005 OKB from the user's main wallet to their burner (one-time, covers ~200 txs). Or auto-relay from the deployer (cheaper UX but couples the deployer to user growth).
-- [ ] **MockUSDC mint UX** — already open-mint on-chain; add a "Mint 100 test USDC" button in the Fund Agent panel so new users don't need to find the contract address.
-- [ ] **Rate-limit awareness** — API-Football free tier is 100 req/day across ALL users. With many users, calls like `/fixtures/:id/lineups` need stricter caching. Mitigated when upgrading to a paid plan.
-- [ ] **Burner key security disclaimer** — encrypted-in-DB is fine for testnet but not mainnet. Add a clear "this is testnet — never send mainnet funds to your burner" notice in the UI. Upgrading to OKX Agentic Wallet / TEE is the mainnet path (already noted as intentional v2 gap in HANDOFF.md).
-- [ ] **Per-wallet strategy cap** — open mint MockUSDC means there's no economic cost to spam strategies. Cap at e.g. 5 active strategies per wallet to prevent abuse.
+### Public hosting (DONE)
+- [x] **Vercel deploy for the web** — Project `x-cup-os-v2` at https://x-cup-os-v2.vercel.app. Root Directory `apps/web`. Single env var `NEXT_PUBLIC_API_URL` points at the Railway API. Auto-deploys on every push to main.
+- [x] **Railway deploy for the API** — Service `@x-cup/api` at https://x-cupapi-production.up.railway.app. Build script changed from `tsc` to `prisma generate`; start script runs `prisma migrate deploy && tsx src/index.ts`. `tsx` moved from devDependencies → dependencies. No compiled dist/, no type errors at deploy time.
+- [x] **Railway Postgres** — Hosted in the same project as the API, connected via `${{Postgres.DATABASE_URL}}` template (internal hostname `postgres.railway.internal` for cheap fast reads).
+- [x] **CORS tightened** — Railway's `WEB_ORIGIN` set to the Vercel URL (not `*`) so only the production frontend can call the API.
+- [x] **Testnet disclaimer banner** — Top-of-page banner on every Vercel page: "X LAYER TESTNET · MOCK USDC · NEVER SEND MAINNET FUNDS TO YOUR AGENT WALLET".
+
+### Onboarding UX (DONE)
+- [x] **"Mint 10k USDC" button** — Calls `MockUSDC.mint(user, 10_000 * 1e6)`. Always available in AgentPanel as a secondary action — new users get test USDC in one click without finding the contract address on the explorer.
+- [x] **"Top up agent gas" button** — Sends 0.005 OKB from user's main wallet → their burner. Covers ~500 agent transactions. Solves the chicken-and-egg problem where a new burner has no gas to fire bets.
+- [x] **Per-wallet strategy cap** — `POST /strategies` rejects the 6th active strategy per wallet with a clear 429 error. Prevents one bot from burning the shared Groq quota.
+- [x] **Welcome modal on first connect** — Three-step onboarding ("Mint USDC → Top up gas → Write a strategy"). Dismissed via localStorage flag so returning users don't see it. Includes the testnet-only safety reminder.
+
+### API-Football Pro tier (DONE)
+- [x] **Upgraded to Pro** — 7,500 req/day (was 100). Made WC 2026 fixtures accessible and let us drop the `sleep(7000)` pacing in the first-scorer seed (cuts seed time from ~10 min to ~30s).
+
+---
+
+## Phase 6 — smarter agent (planned, ordered by impact)
+
+The agent today fires on match-winner + first-scorer triggers. Concrete upgrades, ranked:
+
+- [ ] **Odds-aware firing** (~1 hr) — agent reads pool state before firing, skips bad-value entries. "Only stake YES if implied YES < 40%". Biggest single quality jump.
+- [ ] **Arb-aware execution** (~1 hr) — wire `GET /arb-signals` into the firing loop. When a winner_vs_reach_final violation appears with sufficient depth, agent auto-takes the two-leg position. Closes the loop on the arb chips we already surfaced in the UI.
+- [ ] **Live tournament cron loop** (~2 hrs) — `node-cron` task polls API-Football every 60s, auto-settles fixtures that flip to FT, fires first-scorer + 1x2 events as match data lands. Required for actual WC 2026 once matches start (mid-June).
+- [ ] **Multi-leg strategies** (~2 hrs) — parser supports "if X AND Y" composite triggers. Stricter Zod schema, slightly larger Groq tool definition.
+- [ ] **Dynamic sizing** (~1 hr) — stake scales with conviction. "Bet 50 if probability ≤ 30%, 100 if ≤ 20%, skip otherwise". Kelly-criterion-flavored.
+- [ ] **Hedge support** (~3 hrs) — agent monitors open positions and auto-hedges if the line moves past a threshold.
+
+---
+
+## Phase 7 — production hardening (future, not blockers)
+
+- [ ] **OKX Agentic Wallet / TEE for burner keys** — current AES-256-GCM in Postgres is fine for testnet, not mainnet.
+- [ ] **Chainlink Functions oracle for settle** — replace admin-signed settle with a real-world data fetch.
+- [ ] **Custom domain** — `yourdomain.com` → Vercel, `api.yourdomain.com` → Railway. Architecture is already ready.
+- [ ] **DEPLOYER_PRIVATE_KEY rotation** — briefly sat on Vercel during initial config. Testnet so low urgency, but worth rotating before any public announcement. Workflow: new wallet → grant ORACLE + ADMIN roles → revoke old.
+- [ ] **Agent marketplace** — programmatic auth (signed-message) so external agents can self-register, deploy strategies, compete on leaderboard.
 
 ---
 
