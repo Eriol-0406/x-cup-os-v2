@@ -23,6 +23,7 @@ type State =
 export function TournamentMarketGrid({ arbViolations }: { arbViolations?: Map<number, ArbWinnerVsRfSignal> } = {}) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [sort, setSort] = useState<Sort>("pot");
+  const [search, setSearch] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -50,14 +51,22 @@ export function TournamentMarketGrid({ arbViolations }: { arbViolations?: Map<nu
 
   const sorted = useMemo(() => {
     if (state.kind !== "ready") return [];
-    const arr = [...state.markets];
+    const q = search.trim().toLowerCase();
+    const filtered = q
+      ? state.markets.filter(
+          (m) =>
+            m.teamName.toLowerCase().includes(q) ||
+            (m.teamCode ?? "").toLowerCase().includes(q),
+        )
+      : state.markets;
+    const arr = [...filtered];
     arr.sort((a, b) => {
       if (sort === "alpha") return a.teamName.localeCompare(b.teamName);
       if (sort === "yesProb") return b.impliedYesProb - a.impliedYesProb;
       return b.totalPotUsdc - a.totalPotUsdc;
     });
     return arr;
-  }, [state, sort]);
+  }, [state, sort, search]);
 
   return (
     <section id="tournament" style={{ marginBottom: 64 }}>
@@ -68,16 +77,26 @@ export function TournamentMarketGrid({ arbViolations }: { arbViolations?: Map<nu
             Long-term bets — "Does this team win the cup?" One binary market per team.
           </div>
         </div>
-        <div className="filter-pills">
-          <button className={`filter-pill${sort === "pot" ? " filter-pill-active" : ""}`} onClick={() => setSort("pot")}>
-            <span>By pot</span>
-          </button>
-          <button className={`filter-pill${sort === "yesProb" ? " filter-pill-active" : ""}`} onClick={() => setSort("yesProb")}>
-            <span>By odds</span>
-          </button>
-          <button className={`filter-pill${sort === "alpha" ? " filter-pill-active" : ""}`} onClick={() => setSort("alpha")}>
-            <span>A → Z</span>
-          </button>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search team…"
+            className="strategy-input"
+            style={{ minHeight: 34, padding: "6px 12px", fontSize: 12, width: 180 }}
+          />
+          <div className="filter-pills">
+            <button className={`filter-pill${sort === "pot" ? " filter-pill-active" : ""}`} onClick={() => setSort("pot")}>
+              <span>By pot</span>
+            </button>
+            <button className={`filter-pill${sort === "yesProb" ? " filter-pill-active" : ""}`} onClick={() => setSort("yesProb")}>
+              <span>By odds</span>
+            </button>
+            <button className={`filter-pill${sort === "alpha" ? " filter-pill-active" : ""}`} onClick={() => setSort("alpha")}>
+              <span>A → Z</span>
+            </button>
+          </div>
         </div>
       </div>
 

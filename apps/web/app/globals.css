@@ -290,34 +290,36 @@ button {
   justify-content: center;
   align-items: center;
   width: 100%;
-  max-width: 460px;
+  max-width: 480px;
   margin: 0 auto;
-  /* CSS mask that fades the bottom-right corner where the source video has a
-     small Gemini watermark. Radial gradient fades the lower-right ~80px to
-     transparent so the watermark blends into the page background. */
-  -webkit-mask-image: radial-gradient(
-    circle at 86% 88%,
-    transparent 0,
-    transparent 36px,
-    #000 80px,
-    #000 100%
+  aspect-ratio: 16 / 9;
+}
+.hero-trophy-wrap::before {
+  /* Radial glow halo behind the trophy — gives the wireframe more presence */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(91, 140, 255, 0.22) 0%,
+    rgba(91, 140, 255, 0.08) 30%,
+    transparent 60%
   );
-  mask-image: radial-gradient(
-    circle at 86% 88%,
-    transparent 0,
-    transparent 36px,
-    #000 80px,
-    #000 100%
-  );
+  z-index: 0;
+  animation: trophy-halo-pulse 6s ease-in-out infinite;
+}
+@keyframes trophy-halo-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50%      { transform: scale(1.08); opacity: 1; }
 }
 .hero-trophy-wrap video {
+  position: relative;
+  z-index: 1;
   width: 100%;
-  height: auto;
-  display: block;
-  /* Slightly negative bottom offset hides any remaining watermark pixels in
-     case the mask radius doesn't fully cover them on different aspect ratios. */
-  margin-bottom: -8px;
-  filter: drop-shadow(0 0 32px rgba(91, 140, 255, 0.35));
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 24px rgba(91, 140, 255, 0.5));
+  mix-blend-mode: lighten; /* keeps the cyan wireframe on dark bg without showing black around it */
 }
 
 /* Kicker — small monospace techy chip */

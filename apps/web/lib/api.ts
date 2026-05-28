@@ -368,6 +368,12 @@ export interface TopScorerRow {
   assists: number;
   appearances: number;
   minutes: number;
+  // Pre-tournament fields — populated by the backend when no real goal data
+  // exists yet. The frontend uses these to render bookmaker-style odds in
+  // place of goal counts before the tournament kicks off.
+  preTournament?: boolean;
+  preMarketOdds?: string;
+  rank?: number;
 }
 
 export async function fetchTopScorers(): Promise<TopScorerRow[]> {

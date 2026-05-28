@@ -31,6 +31,7 @@ export function MatchList() {
   const [filter, setFilter] = useState<FixtureStatusFilter>("all");
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [teamGroup, setTeamGroup] = useState<Record<number, string>>({});
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -97,8 +98,17 @@ export function MatchList() {
         (f) => teamGroup[f.home.id] === groupFilter || teamGroup[f.away.id] === groupFilter,
       );
     }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      pool = pool.filter(
+        (f) =>
+          f.home.name.toLowerCase().includes(q) ||
+          f.away.name.toLowerCase().includes(q) ||
+          f.round.toLowerCase().includes(q),
+      );
+    }
     return pool;
-  }, [state, filter, groupFilter, teamGroup]);
+  }, [state, filter, groupFilter, teamGroup, search]);
 
   return (
     <section id="matches" style={{ marginBottom: 48 }}>
@@ -115,6 +125,19 @@ export function MatchList() {
           </span>
         )}
       </div>
+
+      {state.kind === "ready" && (
+        <div style={{ marginBottom: 12 }}>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by team name, round (e.g. Argentina, Final)…"
+            className="strategy-input"
+            style={{ minHeight: 38, padding: "8px 14px", fontSize: 13, width: "100%", maxWidth: 420 }}
+          />
+        </div>
+      )}
 
       {state.kind === "ready" && <MarketFilter current={filter} onChange={setFilter} counts={counts} />}
 
