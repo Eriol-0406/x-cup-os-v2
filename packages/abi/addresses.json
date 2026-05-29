@@ -12,11 +12,22 @@
       "XCupMarket": {
         "address": "0x5349be46935302f77acD6363D063efFE5DE27c42",
         "deployTx": "0x15fa6160277aca9e803e15f04eae19ead37bf530e7997d56033e041ea05d923a"
+      },
+      "XCupBetHook": {
+        "address": "0x9e5385B4B5146cceFf41BF2a7529D09107C8098e",
+        "deployTx": "0x5ab1320c4dbfd1ed1072343a9272405190f274a19f10b9577d422f0f099468b8",
+        "demoTriggerTx": "0x93ed02d13d9bbd743b376925fae131397ffd7940b37ec4d20b7012684d4e3e3a",
+        "note": "Uniswap V4 Hook (afterSwap). Demonstration deployment uses the deployer wallet as 'PoolManager' so afterSwap can be triggered directly on testnet. Production deployment on X Layer mainnet would use the real V4 PoolManager at 0x360e68faccca8ca495c1b759fd9eee466db9fb32 (chain 196)."
       }
     },
     "seedMarkets": [],
     "deployedAt": "2026-05-27T08:55:00.000Z",
     "treasury": "0xFaC819e2465C24529ad3684D61BFb442cC239d8E",
-    "note": "v2 deploy with variable per-market feeBps (capped at 5%) + settable treasury (admin can call setTreasury to swap to a Safe). Markets are created lazily per fixture by the API's /admin/* seed endpoints."
+    "uniswapV4": {
+      "mainnetPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+      "mainnetChainId": 196,
+      "docs": "https://developers.uniswap.org/contracts/v4/deployments"
+    },
+    "note": "v2 deploy with variable per-market feeBps (capped at 5%) + settable treasury (admin can call setTreasury to swap to a Safe). XCupBetHook is a Uniswap V4 Hook that routes a fraction of swap output into XCupMarket on every afterSwap callback — 'every trade is implicitly a market bet'. Markets are created lazily per fixture by the API's /admin/* seed endpoints."
   }
 }

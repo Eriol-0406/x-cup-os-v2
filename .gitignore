@@ -35,7 +35,7 @@ out/
 contracts/out/
 contracts/cache/
 contracts/broadcast/
-contracts/lib/
+# contracts/lib is tracked via submodules (openzeppelin, v4-core, v4-periphery)
 
 # logs
 *.log
